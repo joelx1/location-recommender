@@ -1,3 +1,4 @@
+[Link to Group Doc](https://docs.google.com/document/d/1eXN51GvDNt0YDFEwOpTr5mmRmX8Dusm4kUlPkmp5ZNE/edit?tab=t.0)
 # Description
 Develop an application that is similar to Letterboxd, but for physical locations such as bars, restaurants and social locations.
 
