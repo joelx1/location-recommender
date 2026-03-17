@@ -1,7 +1,7 @@
 # LocationReviewApp — Backend
 
 ## What This Is
-This is the Spring Boot backend for the LocationReviewApp — a location review platform where users can discover, add, and review places.
+This is the Spring Boot backend for the location review and recommendation app (Name Pending) — a location review platform where users can discover, add, and review places.
 
 ## Tech Stack
 - **Java 17+** — programming language
