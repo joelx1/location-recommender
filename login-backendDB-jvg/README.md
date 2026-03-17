@@ -15,11 +15,11 @@ Donwload this folder as a zip
 ### 1. Create your Azure SQL Database
 
 1. Create a new **SQL Database** resource
-2.
+2. Make sure you select SQL password or Entra ID + SQL password for auth
 3. Note down your **server name**, **admin username**, and **admin password**
 4. Make sure to allow your IP through the **firewall rules** in the Azure portal
 
-<span style="color: aqua;">**OR contact me if you want to just using the database I used**</span>
+**OR contact me if you want to just using the database I used**
 
 ### 2. Create the Users table
 
