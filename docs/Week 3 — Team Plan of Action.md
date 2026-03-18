@@ -19,11 +19,11 @@
 
 **Your job this week: Get a basic "create account" and "log in" working.**
 
-- [ ] Set up the project files and folder structure so it's ready to build on
-- [ ] Make it so anyone on the team can download and run the backend on their own laptop — write down any steps needed
-- [ ] Build the "create an account" feature — takes a username, email, and password, saves it
+- [x] Set up the project files and folder structure so it's ready to build on
+- [x] Make it so anyone on the team can download and run the backend on their own laptop — write down any steps needed
+- [x] Build the "create an account" feature — takes a username, email, and password, saves it
 - [ ] Build the "log in" feature — checks if the username and password match
-- [ ] Build a way to look up a user's basic info (name, bio)
+- [x] Build a way to look up a user's basic info (name, bio)
 - [ ] Test it yourself by sending requests to it — you don't need an app screen for this, just test it directly
 
 **By Thursday:** You should be able to create a fake account and pull back that user's info without needing a real app screen.
@@ -34,13 +34,13 @@
 
 **Your job this week: Set up the tables where data will be stored, so the backend has somewhere to save things.**
 
-- [ ] Write out the structure for the main tables:
+- [x] Write out the structure for the main tables:
   - **Users** — stores name, email, password, bio, profile picture
   - **Locations** — stores place name, what type it is (bar, restaurant etc.), and where it is on the map
   - **Reviews** — stores who wrote it, which place it's about, the rating, and the text
   - **Friends** — stores who is friends with who, and whether the request was accepted
 - [ ] Get this set up and running on your own laptop
-- [ ] Share it with the team through GitHub so backend can start building against it straight away
+- [x] Share it with the team through GitHub so backend can start building against it straight away
 - [ ] Check that the map/location part (PostGIS — the bit that stores where places are) is working
 
 **By Thursday:** The tables exist, are shared on GitHub, and the backend can connect to them.
