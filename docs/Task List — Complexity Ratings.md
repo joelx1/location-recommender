@@ -6,43 +6,43 @@ updated: 2026-03-19
 
 # Task List — Complexity Ratings
 
-> Used for planning poker / sprint planning. Ratings are from the perspective of an average team member — not the person most familiar with the area.
-> **E = Easy** (a few hours),
-> **M = Medium** (half a day to a day),
+> Used for planning, poker / sprint planning. Ratings are from the perspective of an average team member — not the person most familiar with the area.
+> **E = Easy** (a few hours), 
+> **M = Medium** (half a day to a day), 
 > **H = Hard** (multiple days, unknowns involved)
 
 ---
 
 ## Database
 
-| # | Task | Difficulty | Week | Notes |
-|---|---|---|---|---|
-| DB-1 | Install PostgreSQL locally + enable PostGIS extension | M | 3 | Each team member needs this before any local testing works |
-| DB-2 | Run the schema SQL (create all 4 tables) | E | 3 | Script is ready in `database/` — just needs to be run |
-| DB-3 | Verify PostGIS geo queries work (e.g. ST_Distance) | M | 4 | Test that coordinates can be stored and queried by proximity |
-| DB-4 | Add `bio` and `profile_pic` columns to users table | E | 4 | Deferred — not needed yet |
-| DB-5 | Add `score` column to locations table | E | 6 | Needed for ranking feature |
-| DB-6 | Migration strategy (how schema changes are shared) | M | 3 | Decide: SQL scripts in repo vs. a tool like Flyway |
+| #    | Task                                                  | Difficulty | Week | Notes                                                        |
+| ---- | ----------------------------------------------------- | ---------- | ---- | ------------------------------------------------------------ |
+| DB-1 | Install PostgreSQL locally + enable PostGIS extension | M          | 3    | Each team member needs this before any local testing works   |
+| DB-2 | Run the schema SQL (create all 4 tables)              | E          | 3    | Script is ready in `database/` — just needs to be run        |
+| DB-3 | Verify PostGIS geo queries work (e.g. ST_Distance)    | M          | 4    | Test that coordinates can be stored and queried by proximity |
+| DB-4 | Add `bio` and `profile_pic` columns to users table    | E          | 4    | Deferred — not needed yet                                    |
+| DB-5 | Add `score` column to locations table                 | E          | 6    | Needed for ranking feature                                   |
+| DB-6 | Migration strategy (how schema changes are shared)    | M          | 3    | versioned SQL scripts in the repo is simplest                |
 
 ---
 
 ## Backend
 
-| # | Task | Difficulty | Week | Notes |
-|---|---|---|---|---|
-| BE-1 | Fix DB connection (configure `application.properties`) | E | 3 | Each person needs to set their local PostgreSQL credentials — currently crashes on startup |
-| BE-2 | Azure Entra ID — app registration on Azure portal | M | 3 | Done once, shared config. Prerequisite for BE-3 |
-| BE-3 | Add Entra ID token validation to Spring Boot (SecurityConfig) | H | 3 | Validates JWT tokens from Azure. Blocks all auth-protected endpoints |
-| BE-4 | GET /users / POST /users / GET /users/{id} | E | ✅ Done | Basic CRUD in place |
-| BE-5 | GET /locations / POST /locations / GET /locations/{id} | E | ✅ Done | Basic CRUD in place |
-| BE-6 | GET /reviews / POST /reviews / GET /reviews/{id} | E | ✅ Done | Basic CRUD in place |
-| BE-7 | GET /locations/{id}/reviews (reviews for a location) | E | 4 | Filtered query — small addition to ReviewController |
-| BE-8 | GET /users/{id}/reviews (reviews by a user) | E | 4 | Same pattern as BE-7 |
-| BE-9 | Friend endpoints: send request, accept, list friends | M | 5 | POST /friends, PATCH /friends/{id}, GET /users/{id}/friends |
-| BE-10 | GET /users/{id}/feed (reviews from friends) | H | 5 | Joins users → friendships → reviews. Most complex query so far |
-| BE-11 | Proximity search — locations within X km (PostGIS) | H | 4 | Uses ST_DWithin. Needs PostGIS working end-to-end first |
-| BE-12 | Location score/ranking calculation | H | 6 | Formula TBD — depends on reviews being in place |
-| BE-13 | Add bio + profile_pic to User model | E | 4 | Minor model update |
+| #     | Task                                                          | Difficulty | Week | Notes                                                                                      |
+| ----- | ------------------------------------------------------------- | ---------- | ---- | ------------------------------------------------------------------------------------------ |
+| BE-1  | Fix DB connection (configure `application.properties`)        | E          | 3    | Each person needs to set their local PostgreSQL credentials — currently crashes on startup |
+| BE-2  | Azure Entra ID — app registration on Azure portal             | M          | 3    | Done once, shared config. Prerequisite for BE-3                                            |
+| BE-3  | Add Entra ID token validation to Spring Boot (SecurityConfig) | H          | 3    | Validates JWT tokens from Azure. Blocks all auth-protected endpoints                       |
+| BE-4  | GET /users / POST /users / GET /users/{id}                    | E          | 3    | Basic CRUD in place                                                                        |
+| BE-5  | GET /locations / POST /locations / GET /locations/{id}        | E          | 3    | Basic CRUD in place                                                                        |
+| BE-6  | GET /reviews / POST /reviews / GET /reviews/{id}              | E          | 3    | Basic CRUD in place                                                                        |
+| BE-7  | GET /locations/{id}/reviews (reviews for a location)          | E          | 4    | Filtered query — small addition to ReviewController                                        |
+| BE-8  | GET /users/{id}/reviews (reviews by a user)                   | E          | 4    | Same pattern as BE-7                                                                       |
+| BE-9  | Friend endpoints: send request, accept, list friends          | M          | 5    | POST /friends, PATCH /friends/{id}, GET /users/{id}/friends                                |
+| BE-10 | GET /users/{id}/feed (reviews from friends)                   | H          | 5    | Joins users → friendships → reviews. Most complex query so far                             |
+| BE-11 | Proximity search — locations within X km (PostGIS)            | H          | 4    | Uses ST_DWithin. Needs PostGIS working end-to-end first                                    |
+| BE-12 | Location score/ranking calculation                            | H          | 6    | Formula TBD — depends on reviews being in place                                            |
+| BE-13 | Add bio + profile_pic to User model                           | E          | 4    | Minor model update                                                                         |
 
 ---
 
@@ -76,32 +76,3 @@ updated: 2026-03-19
 | INT-4 | Everyone: get project cloned and running locally | E | 3 | Backend needs DB credentials; frontend needs Node + Expo CLI |
 
 ---
-
-## Summary by Week
-
-| Week | Focus | Key tasks |
-|---|---|---|
-| **Week 3 (now)** | Setup, scaffolding & login | DB-1, DB-2, DB-6, BE-1, BE-2, BE-3, FE-1, FE-2, FE-3, FE-4, FE-5, INT-3, INT-4 |
-| **Week 4** | Locations, reviews & map | DB-3, DB-4, BE-7, BE-8, BE-11, BE-13, FE-6, FE-7, FE-8, FE-9, FE-10, INT-1, INT-2 |
-| **Week 5** | Social layer | BE-9, BE-10, FE-11, FE-12, FE-13 |
-| **Week 6** | Polish | DB-5, BE-12 |
-
----
-
-## What Blocks What
-
-```
-DB-1 (local postgres)
-  └── DB-2 (run schema)
-        └── BE-1 (fix DB connection)
-              └── BE-3 (Entra ID auth)       BE-2 (Azure app registration)
-                    └── all auth-protected         └── BE-3
-                        endpoints
-
-BE-3 (auth working)
-  └── FE-5 (login screen)
-        └── FE-6, FE-7, FE-8, FE-9 (all screens that need a logged-in user)
-
-INT-1 (frontend connected to backend)
-  └── INT-2 (end-to-end test)
-```
