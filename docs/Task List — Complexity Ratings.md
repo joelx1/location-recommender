@@ -7,7 +7,9 @@ updated: 2026-03-19
 # Task List — Complexity Ratings
 
 > Used for planning poker / sprint planning. Ratings are from the perspective of an average team member — not the person most familiar with the area.
-> **E = Easy** (a few hours), **M = Medium** (half a day to a day), **H = Hard** (multiple days, unknowns involved)
+> **E = Easy** (a few hours),
+> **M = Medium** (half a day to a day),
+> **H = Hard** (multiple days, unknowns involved)
 
 ---
 
