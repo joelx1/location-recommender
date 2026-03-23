@@ -51,10 +51,10 @@
 
 **Hold off on building real screens this week as the backend isn't ready to connect to yet. If you build screens now you'll likely have to redo them.**
 
-- [ ] Get the app project set up and running on your phone or a phone simulator on your laptop
-- [ ] Agree on how the folders and files should be organised, and set that up
+- [X] Get the app project set up and running on your phone or a phone simulator on your laptop
+- [X] Agree on how the folders and files should be organised, and set that up
 - [ ] Look into how maps work in React Native — what would we need to add a map to the app?
-- [ ] Sketch out (even on paper) the 3 main screens: Login, Profile page, Home Feed
+- [X] Sketch out (even on paper) the 3 main screens: Login, Profile page, Home Feed
 - [ ] Write a short list of what information you'll need the backend to give you — so they know what to build
 
 **By Thursday:** The app opens on a phone/simulator, the folder structure is sorted, and you've written up what you need from backend.
