@@ -20,12 +20,12 @@ VALUES (
     '00000000-0000-0000-0000-000000000001'
 );
 
--- Kildare Arms (~53.3808, -6.5951) — roughly 150 m from the university
+-- Maynooth Castle (~53.3808, -6.5951) — roughly 150 m from the university
 INSERT INTO locations (id, name, category, address, geo, created_by)
 VALUES (
     '00000000-0000-0000-0000-000000000003',
-    'Kildare Arms',
-    'bar',
+    'Maynooth Castle',
+    'landmark',
     'Main Street, Maynooth, Co. Kildare',
     ST_MakePoint(-6.5951, 53.3808)::geography,
     '00000000-0000-0000-0000-000000000001'
