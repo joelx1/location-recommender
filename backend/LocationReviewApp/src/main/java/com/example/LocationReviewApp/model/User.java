@@ -1,8 +1,13 @@
 package com.example.LocationReviewApp.model;
 
-import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 // Represents the 'users' table in the database
 // Each instance of this class = one row in the users table
@@ -23,6 +28,12 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    // Stores a user's bio with a 500 char limit
+    @Column(length = 500)
+    private String bio;
+    // stores a URL once blob storage is added
+    private String profilePic;
+
     // Automatically set to the time the user was created
     private Instant createdAt = Instant.now();
 
@@ -34,6 +45,12 @@ public class User {
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+
+    public String getProfilePic() { return profilePic; }
+    public void setProfilePic(String profilePic) { this.profilePic = profilePic; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
