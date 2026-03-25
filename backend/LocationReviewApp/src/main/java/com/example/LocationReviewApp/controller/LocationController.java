@@ -1,7 +1,15 @@
 package com.example.LocationReviewApp.controller;
 
+import com.example.LocationReviewApp.dto.LocationRequest;
 import com.example.LocationReviewApp.model.Location;
+import com.example.LocationReviewApp.model.Review;
 import com.example.LocationReviewApp.repository.LocationRepository;
+import com.example.LocationReviewApp.repository.ReviewRepository;
+import com.example.LocationReviewApp.repository.UserRepository;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,6 +25,14 @@ public class LocationController {
     @Autowired
     private LocationRepository locationRepository;
 
+    // Injects ReviewRepository to fetch reviews for a location
+    @Autowired
+    private ReviewRepository reviewRepository;
+
+    // Injects UserRepository to look up the user who created a location
+    @Autowired
+    private UserRepository userRepository;
+
     // GET /locations - returns all locations in the database
     @GetMapping
     public List<Location> getAllLocations() {
@@ -31,8 +47,23 @@ public class LocationController {
     }
 
     // POST /locations - creates a new location from the request body
+    // Accepts plain lat/lng and converts to a PostGIS Point
     @PostMapping
-    public Location createLocation(@RequestBody Location location) {
+    public Location createLocation(@RequestBody LocationRequest request) {
+        GeometryFactory gf = new GeometryFactory(new PrecisionModel(), 4326);
+        Point point = gf.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
+
+        Location location = new Location();
+        location.setName(request.getName());
+        location.setCategory(request.getCategory());
+        location.setAddress(request.getAddress());
+        location.setCoordinates(point);
+
+        if (request.getCreatedById() != null) {
+            userRepository.findById(request.getCreatedById())
+                    .ifPresent(location::setCreatedBy);
+        }
+
         return locationRepository.save(location);
     }
 
@@ -40,5 +71,11 @@ public class LocationController {
     @DeleteMapping("/{id}")
     public void deleteLocation(@PathVariable UUID id) {
         locationRepository.deleteById(id);
+    }
+
+    // GET /locations/{id}/reviews - returns all reviews for a location
+    @GetMapping("/{id}/reviews")
+    public List<Review> getReviewsByLocation(@PathVariable UUID id) {
+        return reviewRepository.findByLocationId(id);
     }
 }

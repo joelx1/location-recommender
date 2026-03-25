@@ -1,6 +1,8 @@
 package com.example.LocationReviewApp.controller;
 
+import com.example.LocationReviewApp.model.Review;
 import com.example.LocationReviewApp.model.User;
+import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,10 @@ public class UserController {
     // Injects the UserRepository so we can query the database
     @Autowired
     private UserRepository userRepository;
+
+    // Injects ReviewRepository to fetch reviews written by a user
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     // GET /users - returns all users in the database
     @GetMapping
@@ -40,5 +46,11 @@ public class UserController {
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable UUID id) {
         userRepository.deleteById(id);
+    }
+
+    // GET /users/{id}/reviews - returns all reviews written by a user
+    @GetMapping("/{id}/reviews")
+    public List<Review> getReviewsByUser(@PathVariable UUID id) {
+        return reviewRepository.findByUserId(id);
     }
 }
