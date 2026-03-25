@@ -1,6 +1,7 @@
 package com.example.LocationReviewApp.model;
 
 import jakarta.persistence.*;
+import org.locationtech.jts.geom.Point;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -24,9 +25,10 @@ public class Location {
 
     private String address;
 
-    // Geographic coordinates for map display and proximity search
-    private double latitude;
-    private double longitude;
+    // Geographic coordinates stored as a PostGIS Point for map display and proximity search
+    // 4326 = standard GPS coordinate system (used by Google Maps etc.)
+    @Column(columnDefinition = "geography(Point, 4326)")
+    private Point coordinates;
 
     // Links to the user who added this location
     // ManyToOne = many locations can be created by one user
@@ -48,11 +50,8 @@ public class Location {
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
 
-    public double getLatitude() { return latitude; }
-    public void setLatitude(double latitude) { this.latitude = latitude; }
-
-    public double getLongitude() { return longitude; }
-    public void setLongitude(double longitude) { this.longitude = longitude; }
+    public Point getCoordinates() { return coordinates; }
+    public void setCoordinates(Point coordinates) { this.coordinates = coordinates; }
 
     public User getCreatedBy() { return createdBy; }
     public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
