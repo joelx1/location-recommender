@@ -1,19 +1,28 @@
 package com.example.LocationReviewApp.controller;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.LocationReviewApp.dto.LocationRequest;
 import com.example.LocationReviewApp.model.Location;
 import com.example.LocationReviewApp.model.Review;
 import com.example.LocationReviewApp.repository.LocationRepository;
 import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
-import java.util.UUID;
 
 // Handles all API requests related to locations
 // Base URL for all endpoints in this controller: /locations
@@ -77,5 +86,16 @@ public class LocationController {
     @GetMapping("/{id}/reviews")
     public List<Review> getReviewsByLocation(@PathVariable UUID id) {
         return reviewRepository.findByLocationId(id);
+    }
+
+    // GET /locations/nearby?lat=53.34&lng=-6.26&km=2
+    // Returns all locations within the given radius of the provided coordinates
+    @GetMapping("/nearby")
+    public List<Location> getNearbyLocations(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "5") double km) {
+        double radiusMetres = km * 1000;
+        return locationRepository.findNearby(lat, lng, radiusMetres);
     }
 }
