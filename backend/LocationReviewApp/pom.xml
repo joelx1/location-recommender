@@ -43,6 +43,32 @@
 			<artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
 
+		<!--New Dependencies for Auth-->
+		
+		<!-- JWT library - lets us create and verify tokens locally -->
+		<!-- TODO: remove these three when we switch to Azure Entra ID -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>0.12.6</version>
+		</dependency>
+
+		<!-- JWT implementation - does the actual signing work at runtime -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>0.12.6</version>
+			<scope>runtime</scope>
+		</dependency>
+
+		<!-- JWT + Jackson - handles converting token data to/from JSON -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>0.12.6</version>
+			<scope>runtime</scope>
+		</dependency>
+
 		<!-- PostgreSQL Driver -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
