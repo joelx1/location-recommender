@@ -43,9 +43,15 @@ That's it. No password check yet because the User model doesn't have a password 
 
 Make sure your database is running first, then start the app and try these:
 
-**Create a user:**
+**Create a user (via pgAdmin or psql):**
+```sql
+INSERT INTO users (id, username, email, created_at)
+VALUES (gen_random_uuid(), 'testuser', 'test@example.com', NOW());
+```
+
+Or via the API:
 ```http
-POST http://localhost:8080/users
+POST http://localhost:8081/users
 Content-Type: application/json
 
 {
@@ -56,7 +62,7 @@ Content-Type: application/json
 
 **Log in and get a token:**
 ```http
-POST http://localhost:8080/auth/login
+POST http://localhost:8081/auth/login
 Content-Type: application/json
 
 {
@@ -71,7 +77,7 @@ You'll get back something like:
 
 **Use the token on any protected route:**
 ```http
-GET http://localhost:8080/locations
+GET http://localhost:8081/locations
 Authorization: Bearer eyJhbGci...
 ```
 
