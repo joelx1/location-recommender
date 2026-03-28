@@ -3,15 +3,15 @@ import React from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { router } from "expo-router";
 
-const index = () => {
+const signup = () => {
   return (
     <ScreenWrapper>
       <View>
-        <Text>Home Screen</Text>
-        <Button title="Go to Login" onPress={() => router.replace("/login")} />
+        <Text>signup</Text>
+        <Button title="Go to Login" onPress={() => router.push("/login")} />
       </View>
     </ScreenWrapper>
   );
 };
 
-export default index;
+export default signup;
