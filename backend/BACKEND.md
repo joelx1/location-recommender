@@ -118,8 +118,28 @@ GET /locations/{id}/reviews
 GET /users/{id}/reviews
 ```
 
+### Get closest locations to specified location
+```
+GET /locations/nearby?lat=[x1]&lng=[x2]&km=[x3]
+```
+#### Query Parameters
+
+| Parameter | Type  | Description               |
+|----------|-------|---------------------------|
+| `x1`    | double | Latitude of the location  |
+| `x2`    | double | Longitude of the location |
+| `x3`     | double | Radius in kilometers      |
+
+#### Example Request
+latitude: 53.3456  
+longitude: -6.2619  
+radius: 5km  
+
+```
+GET /locations/nearby?lat=53.3456&lng=-6.2619&km=5
+```
+
 ## What's Next
 - Azure Entra ID authentication
-- Nearby location search using coordinates (PostGIS ST_DWithin)
 - Friendship endpoints
 - Review photo upload via Azure Blob Storage
