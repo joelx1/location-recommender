@@ -1,7 +1,8 @@
 ---
 title: Task List
 project: Microsoft Project (CS335)
-updated: 2026-03-24
+updated: 2026-03-31
+updated table: backend
 ---
 
 # Task List
@@ -33,13 +34,13 @@ updated: 2026-03-24
 | [x]  | BE-4  | GET /users / POST /users / GET /users/{id}                    | E          | 3    | Basic CRUD in place                                                                        |
 | [x]  | BE-5  | GET /locations / POST /locations / GET /locations/{id}        | E          | 3    | Basic CRUD in place                                                                        |
 | [x]  | BE-6  | GET /reviews / POST /reviews / GET /reviews/{id}              | E          | 3    | Basic CRUD in place                                                                        |
-| [ ]  | BE-7  | GET /locations/{id}/reviews (reviews for a location)          | E          | 4    | Filtered query — small addition to ReviewController                                        |
-| [ ]  | BE-8  | GET /users/{id}/reviews (reviews by a user)                   | E          | 4    | Same pattern as BE-7                                                                       |
-| [ ]  | BE-9  | Friend endpoints: send request, accept, list friends          | M          | 5    | POST /friends, PATCH /friends/{id}, GET /users/{id}/friends                                |
-| [ ]  | BE-10 | GET /users/{id}/feed (reviews from friends)                   | H          | 5    | Joins users → friendships → reviews. Most complex query so far                             |
-| [ ]  | BE-11 | Proximity search — locations within X km (PostGIS)            | H          | 4    | Uses ST_DWithin. Needs PostGIS working end-to-end first                                    |
+| [x]  | BE-7  | GET /locations/{id}/reviews (reviews for a location)          | E          | 4    | Filtered query — small addition to ReviewController                                        |
+| [x]  | BE-8  | GET /users/{id}/reviews (reviews by a user)                   | E          | 4    | Same pattern as BE-7                                                                       |
+| [x]  | BE-9  | Friend endpoints: send request, accept, list friends          | M          | 5    | POST /friends, PATCH /friends/{id}, GET /users/{id}/friends                                |
+| [x]  | BE-10 | GET /users/{id}/feed (reviews from friends)                   | H          | 5    | Joins users → friendships → reviews. Most complex query so far                             |
+| [x]  | BE-11 | Proximity search — locations within X km (PostGIS)            | H          | 4    | Uses ST_DWithin. Needs PostGIS working end-to-end first                                    |
 | [ ]  | BE-12 | Location score/ranking calculation                            | H          | 6    | Formula TBD — depends on reviews being in place                                            |
-| [ ]  | BE-13 | Add bio + profile_pic to User model                           | E          | 4    | Minor model update                                                                         |
+| [x]  | BE-13 | Add bio + profile_pic to User model                           | E          | 4    | Minor model update                                                                         |
 
 ---
 
