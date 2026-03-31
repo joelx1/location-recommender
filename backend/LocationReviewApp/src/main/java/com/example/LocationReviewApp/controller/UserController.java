@@ -1,13 +1,17 @@
 package com.example.LocationReviewApp.controller;
 
+import com.example.LocationReviewApp.model.Friendship;
+import com.example.LocationReviewApp.model.FriendshipStatus;
 import com.example.LocationReviewApp.model.Review;
 import com.example.LocationReviewApp.model.User;
+import com.example.LocationReviewApp.repository.FriendshipRepository;
 import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 // Handles all API requests related to users
 // Base URL for all endpoints in this controller: /users
@@ -22,6 +26,10 @@ public class UserController {
     // Injects ReviewRepository to fetch reviews written by a user
     @Autowired
     private ReviewRepository reviewRepository;
+
+    // Injects FriendshipRepository to fetch friends and feed
+    @Autowired
+    private FriendshipRepository friendshipRepository;
 
     // GET /users - returns all users in the database
     @GetMapping
@@ -52,5 +60,22 @@ public class UserController {
     @GetMapping("/{id}/reviews")
     public List<Review> getReviewsByUser(@PathVariable UUID id) {
         return reviewRepository.findByUserId(id);
+    }
+
+    // GET /users/{id}/friends - returns all accepted friends for a user
+    // A friendship is bidirectional, so we check both sides and return the *other* user in each pair
+    @GetMapping("/{id}/friends")
+    public List<User> getFriends(@PathVariable UUID id) {
+        List<Friendship> friendships = friendshipRepository.findByUserIdAndStatus(id, FriendshipStatus.ACCEPTED);
+
+        return friendships.stream()
+                .map(f -> f.getRequester().getId().equals(id) ? f.getReceiver() : f.getRequester())
+                .collect(Collectors.toList());
+    }
+
+    // GET /users/{id}/feed - returns reviews posted by a user's friends, newest first
+    @GetMapping("/{id}/feed")
+    public List<Review> getFeed(@PathVariable UUID id) {
+        return reviewRepository.findFeedForUser(id, FriendshipStatus.ACCEPTED);
     }
 }
