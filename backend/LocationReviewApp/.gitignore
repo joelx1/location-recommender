@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Credentials — never commit real passwords or connection strings ###
+src/main/resources/application.properties
+src/main/resources/application-local.properties
