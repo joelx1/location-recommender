@@ -17,6 +17,7 @@ Users can register, add locations (pubs, restaurants, cafes etc.), write reviews
 | PostgreSQL | Relational database |
 | PostGIS | Geographic extension for PostgreSQL — stores and queries coordinates |
 | jackson-datatype-jts (v1.2.10) | Serialises PostGIS Point objects as GeoJSON |
+| Azure Blob Storage | Image storage for profile pictures and uploads |
 
 > **Note on Spring Boot version:** Downgraded from 4.0.3 to 3.2.5 — hibernate-spatial was not available on Maven Central for Hibernate 7, which Spring Boot 4 bundles. 3.2.5 is a stable, widely supported release and resolves all dependencies cleanly.
 
@@ -29,7 +30,7 @@ src/main/java/com/example/LocationReviewApp/
 ├── repository/     → Database query interfaces
 ├── controller/     → REST API endpoints
 ├── dto/            → Data Transfer Objects (LocationRequest, FriendRequest)
-├── config/         → Security + GeoJSON serialization configuration
+├── config/         → Security + GeoJSON serialization + Azure Blob configuration
 └── Application.java → App entry point
 ```
 
@@ -46,7 +47,7 @@ Represents a registered user of the app.
 | username | String | Unique, required |
 | email | String | Unique, required |
 | bio | String | Optional, max 500 characters |
-| profilePic | String | Optional, stores a URL (Azure Blob Storage — not yet implemented) |
+| profilePic | String | Optional, stores a permanent Azure Blob Storage URL |
 | createdAt | Instant | Set automatically on creation |
 
 ### Location
@@ -99,6 +100,7 @@ Represents a friendship between two users. Friendships are directional at the re
 | GET | /users/{id}/reviews | Get all reviews written by a user |
 | GET | /users/{id}/friends | Get all accepted friends for a user |
 | GET | /users/{id}/feed | Get reviews posted by a user's friends (newest first) |
+| POST | /users/{id}/profile-picture | Upload a profile picture for a user |
 
 ### Locations
 | Method | URL | Description |
@@ -124,6 +126,12 @@ Represents a friendship between two users. Friendships are directional at the re
 | POST | /friends | Send a friend request |
 | PATCH | /friends/{id}?receiverId= | Accept a friend request |
 
+### Images
+| Method | URL | Description |
+|--------|-----|-------------|
+| POST | /api/images/upload | Upload an image to Azure Blob Storage |
+| DELETE | /api/images/{blobName} | Delete an image by blob name |
+
 ---
 
 ## Error Responses
@@ -133,6 +141,7 @@ The API returns standard HTTP status codes. Error responses include a `message` 
 | Status | Meaning | Example |
 |--------|---------|---------|
 | 200 OK | Request succeeded | — |
+| 400 Bad Request | Invalid input | No file provided, or file is not an image |
 | 404 Not Found | The requested resource does not exist | User/location/review not found |
 | 403 Forbidden | The caller is not permitted to perform this action | Trying to accept a friend request you didn't receive |
 | 409 Conflict | The request conflicts with existing data | Sending a duplicate friend request |
@@ -147,43 +156,54 @@ The app is configured via `src/main/resources/application.properties`. This file
 ### Key properties
 
 ```properties
-# PostgreSQL connection
-spring.datasource.url=jdbc:postgresql://localhost:5432/locationdb
+# Azure PostgreSQL connection
+spring.datasource.url=your_azure_postgres_jdbc_url
 spring.datasource.username=your_username
 spring.datasource.password=your_password
 
 # Hibernate
 spring.jpa.hibernate.ddl-auto=update
-spring.jpa.properties.hibernate.dialect=org.hibernate.spatial.dialect.postgis.PostgisPG95Dialect
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 
 # Show full error messages in API responses
 server.error.include-message=always
 ```
 
-> **ddl-auto warning:** `update` is safe for local development — Hibernate will create or alter tables automatically. Do **not** use `create` or `create-drop` against the shared Azure database as this will wipe existing data.
+> **ddl-auto warning:** `update` is safe for development — Hibernate will create or alter tables automatically. Do **not** use `create` or `create-drop` against the shared Azure database as this will wipe existing data.
+
+### Azure Blob Storage
+
+Image uploads require Azure Blob Storage. Add the following to your `application.properties`:
+
+```properties
+# Azure Blob Storage
+azure.storage.connection-string=your_connection_string
+azure.storage.container-name=your_container_name
+```
+
+> **Public blob access:** The storage container must have anonymous read access enabled for blobs (not the container). Uploaded images are stored as permanent plain URLs in the format `https://<account>.blob.core.windows.net/<container>/<blob>` — no expiry, no tokens. The container is created automatically on startup if it does not already exist.
 
 ---
 
-## How to Run Locally
+## How to Run
 
 ### Prerequisites
 - Java 17+ installed
-- PostgreSQL installed and running with PostGIS extension enabled
-- IntelliJ IDEA
+- Access to an Azure PostgreSQL database
+- Access to an Azure Blob Storage account
+- Any terminal
 
 ### Setup
 1. Clone the repository
-2. Open in IntelliJ
-3. Copy `application.properties.example` to `application.properties` and fill in your PostgreSQL credentials
-4. Run `Application.java`
-5. Backend starts on `http://localhost:8080`
+2. Copy `application.properties.example` to `application.properties` in `src/main/resources/` and fill in the Azure credentials
+3. Run via terminal:
+   ```
+   .\mvnw.cmd spring-boot:run       # Windows
+   ./mvnw spring-boot:run           # macOS / Linux
+   ```
+4. Backend starts on `http://localhost:8080`
 
-### Database Setup
-Create a PostgreSQL database called `locationdb`, then enable the PostGIS extension by running this once:
-```sql
-CREATE EXTENSION IF NOT EXISTS postgis;
-```
-Tables are created automatically on first run via Hibernate.
+> **No local database needed.** The app connects directly to the shared Azure PostgreSQL instance. Do not change `ddl-auto` to `create` or `create-drop` — this will wipe the shared database.
 
 ---
 
@@ -277,6 +297,33 @@ GET /users/{id}/feed
 ```
 Returns all reviews posted by the user's accepted friends, ordered newest first. Queries both directions of the friendship (the user may have sent or received each friend request).
 
+### Upload a profile picture
+```
+POST /users/{id}/profile-picture
+Content-Type: multipart/form-data
+
+file: <image file>
+```
+Uploads the image to Azure Blob Storage, saves the permanent URL to the user's `profilePic` field, and returns:
+```json
+{ "url": "https://<account>.blob.core.windows.net/<container>/<blob>" }
+```
+
+### Upload a standalone image
+```
+POST /api/images/upload
+Content-Type: multipart/form-data
+
+file: <image file>
+```
+Returns a permanent public URL for the uploaded image. Only image content types (jpeg, png, gif, webp, etc.) are accepted.
+
+### Delete an image
+```
+DELETE /api/images/{blobName}
+```
+Deletes the blob with the given name from Azure Blob Storage. Returns a confirmation message. No-ops silently if the blob does not exist.
+
 ---
 
 ## What's Next
@@ -284,6 +331,5 @@ Returns all reviews posted by the user's accepted friends, ordered newest first.
 | Feature | Notes |
 |---------|-------|
 | Azure Entra ID authentication | Wire up JWT validation; derive user identity from token rather than request body/params |
-| Photo uploads | Review photos, profile pictures, and location cover images via Azure Blob Storage |
-| Migrate to shared database | Switch from local PostgreSQL to the shared Azure Database for PostgreSQL (Flexible Server) — update `application.properties` accordingly and set `ddl-auto=validate` |
+| Photo uploads | Profile pictures implemented via Azure Blob Storage (blob public URLs). Review photos and location cover images still to come. |
 | Input validation | Add `@Valid` annotations and proper 400 responses for malformed requests (e.g. missing required fields, rating out of range) |

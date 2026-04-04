@@ -42,8 +42,5 @@ server.error.include-message=always
 # Connection string for Azure Storage account
 azure.storage.connection-string=
 
-# Number of days before generated SAS tokens expire
-azure.storage.sas-expiry-days=30
-
 # Name of the blob storage container used
 azure.storage.container-name=
