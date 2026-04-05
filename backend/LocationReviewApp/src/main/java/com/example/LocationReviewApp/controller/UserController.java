@@ -1,5 +1,23 @@
 package com.example.LocationReviewApp.controller;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.example.LocationReviewApp.model.Friendship;
 import com.example.LocationReviewApp.model.FriendshipStatus;
 import com.example.LocationReviewApp.model.Review;
@@ -7,11 +25,7 @@ import com.example.LocationReviewApp.model.User;
 import com.example.LocationReviewApp.repository.FriendshipRepository;
 import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import com.example.LocationReviewApp.service.AzureBlobService;
 
 // Handles all API requests related to users
 // Base URL for all endpoints in this controller: /users
@@ -77,5 +91,34 @@ public class UserController {
     @GetMapping("/{id}/feed")
     public List<Review> getFeed(@PathVariable UUID id) {
         return reviewRepository.findFeedForUser(id, FriendshipStatus.ACCEPTED);
+    }
+
+    @Autowired
+    private AzureBlobService blobService;
+
+    // POST /users/{id}/profile-picture - uploads a profile picture to Azure Blob Storage
+    // stores the returned blob URL in the database
+    @PostMapping("/{id}/profile-picture")
+    public ResponseEntity<Map<String, String>> uploadProfilePicture(@PathVariable UUID id, @RequestParam("file") MultipartFile file)
+    {
+        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/"))
+        {
+            return ResponseEntity.badRequest().body(Map.of("error", "File must be an image"));
+        }
+
+        try
+        {
+            String url = blobService.uploadImage(file);
+            user.setProfilePic(url);
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of("url", url));
+        }
+        catch (IOException e)
+        {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Upload failed: " + e.getMessage()));
+        }
     }
 }
