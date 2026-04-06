@@ -8,6 +8,7 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,8 +17,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.LocationReviewApp.dto.LocationRequest;
+import com.example.LocationReviewApp.dto.LocationSummary;
 import com.example.LocationReviewApp.model.Location;
 import com.example.LocationReviewApp.model.Review;
 import com.example.LocationReviewApp.repository.LocationRepository;
@@ -52,7 +55,7 @@ public class LocationController {
     @GetMapping("/{id}")
     public Location getLocationById(@PathVariable UUID id) {
         return locationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Location not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found"));
     }
 
     // POST /locations - creates a new location from the request body
@@ -97,5 +100,18 @@ public class LocationController {
             @RequestParam(defaultValue = "5") double km) {
         double radiusMetres = km * 1000;
         return locationRepository.findNearby(lat, lng, radiusMetres);
+    }
+
+    // GET /locations/nearby/ranked?lat=53.34&lng=-6.26&km=2
+    // Returns locations within the given radius, sorted by Bayesian average score (best first)
+    // Each result includes: id, name, category, address, latitude, longitude,
+    // reviewCount, averageRating, and bayesianScore
+    @GetMapping("/nearby/ranked")
+    public List<LocationSummary> getNearbyRanked(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "5") double km) {
+        double radiusMetres = km * 1000;
+        return locationRepository.findNearbyRanked(lat, lng, radiusMetres);
     }
 }

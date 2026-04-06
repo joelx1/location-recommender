@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.LocationReviewApp.model.Friendship;
 import com.example.LocationReviewApp.model.FriendshipStatus;
@@ -45,6 +47,9 @@ public class UserController {
     @Autowired
     private FriendshipRepository friendshipRepository;
 
+    @Autowired
+    private AzureBlobService blobService;
+
     // GET /users - returns all users in the database
     @GetMapping
     public List<User> getAllUsers() {
@@ -55,7 +60,7 @@ public class UserController {
     @GetMapping("/{id}")
     public User getUserById(@PathVariable UUID id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
     // POST /users - creates a new user from the request body
@@ -93,15 +98,13 @@ public class UserController {
         return reviewRepository.findFeedForUser(id, FriendshipStatus.ACCEPTED);
     }
 
-    @Autowired
-    private AzureBlobService blobService;
-
     // POST /users/{id}/profile-picture - uploads a profile picture to Azure Blob Storage
     // stores the returned blob URL in the database
     @PostMapping("/{id}/profile-picture")
     public ResponseEntity<Map<String, String>> uploadProfilePicture(@PathVariable UUID id, @RequestParam("file") MultipartFile file)
     {
-        User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/"))
