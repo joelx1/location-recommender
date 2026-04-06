@@ -17,7 +17,7 @@ Users can register, add locations (pubs, restaurants, cafes etc.), write reviews
 | PostgreSQL | Relational database |
 | PostGIS | Geographic extension for PostgreSQL — stores and queries coordinates |
 | jackson-datatype-jts (v1.2.10) | Serialises PostGIS Point objects as GeoJSON |
-| Azure Blob Storage | Image storage for profile pictures and uploads |
+| Azure Blob Storage | Image storage for profile pictures, review photos, and standalone uploads |
 
 > **Note on Spring Boot version:** Downgraded from 4.0.3 to 3.2.5 — hibernate-spatial was not available on Maven Central for Hibernate 7, which Spring Boot 4 bundles. 3.2.5 is a stable, widely supported release and resolves all dependencies cleanly.
 
@@ -29,7 +29,7 @@ src/main/java/com/example/LocationReviewApp/
 ├── model/          → Database entity classes (User, Location, Review, Friendship, FriendshipStatus)
 ├── repository/     → Database query interfaces
 ├── controller/     → REST API endpoints
-├── dto/            → Data Transfer Objects (LocationRequest, FriendRequest)
+├── dto/            → Data Transfer Objects (LocationRequest, FriendRequest, LocationSummary)
 ├── config/         → Security + GeoJSON serialization + Azure Blob configuration
 └── Application.java → App entry point
 ```
@@ -59,7 +59,7 @@ Represents a place that can be reviewed (pub, restaurant, cafe etc.).
 | name | String | Required |
 | category | String | e.g. "bar", "restaurant", "cafe" — required |
 | address | String | Optional |
-| coordinates | Point | PostGIS geography(Point, 4326) — stored as GeoJSON, accepts lat/lng via LocationRequest DTO |
+| coordinates | Point | PostGIS geography(Point, 4326) — stored as GeoJSON, accepts lat/lng via LocationRequest DTO. Mapped to column `geo` in the database. |
 | createdBy | User (FK) | Optional reference to the user who added this location |
 | createdAt | Instant | Set automatically on creation |
 
@@ -73,7 +73,10 @@ Represents a user's review of a location.
 | location | Location (FK) | The location being reviewed — required |
 | rating | int | Required (intended range: 1–5) |
 | body | String | Optional written review |
+| photoUrl | String | Optional — stores a permanent Azure Blob Storage URL if a photo was uploaded |
 | createdAt | Instant | Set automatically on creation |
+
+> **Note:** Only one review per user per location is allowed — enforced by a unique constraint on `(user_id, location_id)` in the database.
 
 ### Friendship
 Represents a friendship between two users. Friendships are directional at the request stage (one user sends, one receives) but are treated as bidirectional once accepted.
@@ -82,7 +85,7 @@ Represents a friendship between two users. Friendships are directional at the re
 |-------|------|-------|
 | id | UUID | Auto-generated primary key |
 | requester | User (FK) | The user who sent the friend request |
-| receiver | User (FK) | The user who received the friend request |
+| receiver | User (FK) | The user who received the friend request. Mapped to column `addressee_id` in the database. |
 | status | FriendshipStatus | `PENDING` or `ACCEPTED` — defaults to `PENDING` |
 | createdAt | Instant | Set automatically on creation |
 
@@ -111,6 +114,7 @@ Represents a friendship between two users. Friendships are directional at the re
 | DELETE | /locations/{id} | Delete a location |
 | GET | /locations/{id}/reviews | Get all reviews for a location |
 | GET | /locations/nearby?lat=&lng=&km= | Get locations within a given radius |
+| GET | /locations/nearby/ranked?lat=&lng=&km= | Get locations within a given radius, ranked by Bayesian score |
 
 ### Reviews
 | Method | URL | Description |
@@ -119,6 +123,7 @@ Represents a friendship between two users. Friendships are directional at the re
 | GET | /reviews/{id} | Get review by ID |
 | POST | /reviews | Create a new review |
 | DELETE | /reviews/{id} | Delete a review |
+| POST | /reviews/{id}/photo | Upload a photo for a review |
 
 ### Friends
 | Method | URL | Description |
@@ -144,7 +149,7 @@ The API returns standard HTTP status codes. Error responses include a `message` 
 | 400 Bad Request | Invalid input | No file provided, or file is not an image |
 | 404 Not Found | The requested resource does not exist | User/location/review not found |
 | 403 Forbidden | The caller is not permitted to perform this action | Trying to accept a friend request you didn't receive |
-| 409 Conflict | The request conflicts with existing data | Sending a duplicate friend request |
+| 409 Conflict | The request conflicts with existing data | Sending a duplicate friend request, or reviewing the same location twice |
 | 500 Internal Server Error | Unexpected server error | — |
 
 ---
@@ -182,6 +187,61 @@ azure.storage.container-name=your_container_name
 ```
 
 > **Public blob access:** The storage container must have anonymous read access enabled for blobs (not the container). Uploaded images are stored as permanent plain URLs in the format `https://<account>.blob.core.windows.net/<container>/<blob>` — no expiry, no tokens. The container is created automatically on startup if it does not already exist.
+
+### CORS
+
+CORS is configured in `SecurityConfig.java` to accept requests from any origin. This is required for the React Native frontend running on Expo Go on a physical device — Expo Go cannot use `localhost`, so the frontend connects to the backend via the machine's local IP address over shared Wi-Fi.
+
+> **TODO:** Restrict allowed origins before production. The current `setAllowedOriginPatterns("*")` setting is development-only.
+
+---
+
+## Known Database Notes
+
+The shared Azure PostgreSQL schema uses some column names that differ from the Java entity field names. These are mapped explicitly in the entity classes using `@Column(name=...)` and `@JoinColumn(name=...)` — no code changes are needed, but it is useful to be aware of these if you inspect the database directly.
+
+| Table | Database column | Java field |
+|-------|----------------|------------|
+| locations | geo | coordinates |
+| friendships | addressee_id | receiver |
+
+### Dropped constraints
+
+The `friendships_status_check` constraint was dropped from the database. It originally only allowed lowercase values (`pending`, `accepted`, `blocked`) but the Java enum stores uppercase (`PENDING`, `ACCEPTED`). The constraint was removed rather than altered since the enum enforces valid values at the application level. If the schema is ever recreated from scratch, do not add this constraint back unless you also change the enum to store lowercase.
+
+### Native query casting
+
+PostgreSQL's `::` shorthand cast syntax (e.g. `l.geo::geometry`) cannot be used in Spring Data native queries. Spring Data's parameter binding parser treats `:geometry` as a named parameter and strips one of the colons, producing invalid SQL. Always use the standard `CAST(x AS type)` syntax instead:
+
+```sql
+-- Do not use:
+ST_Y(l.geo::geometry)
+
+-- Use instead:
+ST_Y(CAST(l.geo AS geometry))
+```
+
+---
+
+## Location Ranking — Bayesian Scoring
+
+The `GET /locations/nearby/ranked` endpoint sorts locations by a Bayesian average score rather than a plain average rating. This prevents a location with a single 5★ review from outranking one with hundreds of strong reviews.
+
+**Formula:**
+```
+bayesianScore = (C × globalMean + sumOfRatings) / (C + reviewCount)
+```
+
+| Variable | Value | Meaning |
+|----------|-------|---------|
+| C | 5 | Confidence weight — how many reviews a location needs before its score is fully trusted |
+| globalMean | computed at query time | Average rating across every review in the database |
+| sumOfRatings | computed at query time | Sum of all ratings for this location |
+| reviewCount | computed at query time | Number of reviews for this location |
+
+**In plain terms:** Every location starts anchored toward the global average. As it accumulates more reviews, the anchor weakens and its score reflects its actual ratings more closely. A location with zero reviews scores exactly at the global average — sitting mid-pack rather than top or bottom.
+
+The value of `C = 5` is a tuning parameter and can be adjusted in `LocationRepository.java` if the ranking behaviour needs changing.
 
 ---
 
@@ -243,6 +303,19 @@ POST /reviews
 }
 ```
 
+### Upload a review photo
+```
+POST /reviews/{id}/photo
+Content-Type: multipart/form-data
+
+file: <image file>
+```
+Uploads the image to Azure Blob Storage, saves the permanent URL to the review's `photoUrl` field, and returns:
+```json
+{ "url": "https://<account>.blob.core.windows.net/<container>/<blob>" }
+```
+Photo is optional — reviews without a photo have `photoUrl: null`.
+
 ### Get all reviews for a location
 ```
 GET /locations/{id}/reviews
@@ -254,7 +327,7 @@ GET /users/{id}/reviews
 ```
 
 ### Get nearby locations
-Returns all locations within a given radius of the provided coordinates.
+Returns all locations within a given radius of the provided coordinates, in no particular order.
 ```
 GET /locations/nearby?lat={latitude}&lng={longitude}&km={radius}
 ```
@@ -269,6 +342,40 @@ Example — locations within 5km of Dublin city centre:
 ```
 GET /locations/nearby?lat=53.3456&lng=-6.2619&km=5
 ```
+
+### Get nearby locations ranked by score
+Returns locations within a given radius, sorted by Bayesian average score (best first).
+
+A location with 1 perfect review will not outrank one with 100 strong reviews — new locations are anchored toward the global average until they have enough reviews to be trusted.
+
+```
+GET /locations/nearby/ranked?lat={latitude}&lng={longitude}&km={radius}
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| lat | double | Latitude of the search origin |
+| lng | double | Longitude of the search origin |
+| km | double | Search radius in kilometres (default: 5) |
+
+Example — ranked locations within 5km of Dublin city centre:
+```
+GET /locations/nearby/ranked?lat=53.3456&lng=-6.2619&km=5
+```
+
+Response fields per location:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | UUID | Location ID |
+| name | String | Location name |
+| category | String | e.g. "bar", "restaurant" |
+| address | String | Address |
+| latitude | Double | Latitude (extracted from PostGIS Point) |
+| longitude | Double | Longitude (extracted from PostGIS Point) |
+| reviewCount | Integer | Total number of reviews |
+| averageRating | Double | Plain average of all ratings (0 if no reviews) |
+| bayesianScore | Double | Bayesian-adjusted score used for ranking |
 
 ### Send a friend request
 ```json
@@ -331,5 +438,5 @@ Deletes the blob with the given name from Azure Blob Storage. Returns a confirma
 | Feature | Notes |
 |---------|-------|
 | Azure Entra ID authentication | Wire up JWT validation; derive user identity from token rather than request body/params |
-| Photo uploads | Profile pictures implemented via Azure Blob Storage (blob public URLs). Review photos and location cover images still to come. |
+| Location cover images | Blob storage infrastructure already in place |
 | Input validation | Add `@Valid` annotations and proper 400 responses for malformed requests (e.g. missing required fields, rating out of range) |
