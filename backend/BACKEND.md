@@ -99,22 +99,27 @@ Represents a friendship between two users. Friendships are directional at the re
 | GET | /users | Get all users |
 | GET | /users/{id} | Get user by ID |
 | POST | /users | Create a new user |
+| PATCH | /users/{id} | Update a user's profile (username, email, bio) |
 | DELETE | /users/{id} | Delete a user |
 | GET | /users/{id}/reviews | Get all reviews written by a user |
 | GET | /users/{id}/friends | Get all accepted friends for a user |
 | GET | /users/{id}/feed | Get reviews posted by a user's friends (newest first) |
+| GET | /users/{id}/friendship-status?with= | Get friendship status between two users |
 | POST | /users/{id}/profile-picture | Upload a profile picture for a user |
 
 ### Locations
 | Method | URL | Description |
 |--------|-----|-------------|
 | GET | /locations | Get all locations |
-| GET | /locations/{id} | Get location by ID |
+| GET | /locations/{id} | Get location by ID (returns GeoJSON coordinates) |
+| GET | /locations/{id}/summary | Get location by ID with review stats (returns flat lat/lng) |
+| GET | /locations/{id}/social-summary?userId= | Get count of a user's friends who have reviewed this location |
 | POST | /locations | Create a new location |
 | DELETE | /locations/{id} | Delete a location |
 | GET | /locations/{id}/reviews | Get all reviews for a location |
 | GET | /locations/nearby?lat=&lng=&km= | Get locations within a given radius |
 | GET | /locations/nearby/ranked?lat=&lng=&km= | Get locations within a given radius, ranked by Bayesian score |
+| GET | /locations/search?q= | Search locations by name or category |
 
 ### Reviews
 | Method | URL | Description |
@@ -225,7 +230,7 @@ ST_Y(CAST(l.geo AS geometry))
 
 ## Location Ranking — Bayesian Scoring
 
-The `GET /locations/nearby/ranked` endpoint sorts locations by a Bayesian average score rather than a plain average rating. This prevents a location with a single 5★ review from outranking one with hundreds of strong reviews.
+The `GET /locations/nearby/ranked` and `GET /locations/{id}/summary` endpoints include a Bayesian average score alongside the plain average rating. This prevents a location with a single 5★ review from outranking one with hundreds of strong reviews.
 
 **Formula:**
 ```
@@ -278,6 +283,15 @@ POST /users
 }
 ```
 
+### Update a user's profile
+Only include the fields you want to change — omitted fields are left unchanged.
+```json
+PATCH /users/{id}
+{
+  "bio": "Big fan of Dublin pubs"
+}
+```
+
 ### Create a location
 ```json
 POST /locations
@@ -291,6 +305,33 @@ POST /locations
 }
 ```
 Coordinates are stored internally as a PostGIS `geography(Point, 4326)` column and returned as GeoJSON. Callers always send plain `latitude`/`longitude` numbers.
+
+### Get a location with review stats
+Returns the location alongside `reviewCount`, `averageRating`, and `bayesianScore`. Coordinates are returned as flat `latitude`/`longitude` numbers rather than GeoJSON.
+```
+GET /locations/{id}/summary
+```
+
+Use `GET /locations/{id}` instead if you need the GeoJSON coordinates (e.g. for map display).
+
+### Get a location's social summary
+Returns how many of the current user's accepted friends have reviewed a location. Returns `0` if none have.
+```
+GET /locations/{id}/social-summary?userId={currentUserId}
+```
+
+Example response:
+```json
+{ "friendsReviewedCount": 3 }
+```
+
+### Search for locations
+Case-insensitive search across location name and category. Returns the same fields as `/nearby/ranked`.
+```
+GET /locations/search?q=bar
+GET /locations/search?q=cafe
+```
+Returns an empty array if no matches are found or if the query is blank.
 
 ### Create a review
 ```json
@@ -363,7 +404,7 @@ Example — ranked locations within 5km of Dublin city centre:
 GET /locations/nearby/ranked?lat=53.3456&lng=-6.2619&km=5
 ```
 
-Response fields per location:
+Response fields per location (same shape returned by `/search` and `/summary`):
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -397,6 +438,18 @@ PATCH /friends/{friendship-id}?receiverId={your-user-uuid}
 GET /users/{id}/friends
 ```
 Returns a list of `User` objects who have an accepted friendship with the given user. Friendships are bidirectional — the user may have been either the requester or the receiver.
+
+### Get friendship status between two users
+Returns whether two users are friends, have a pending request between them, or have no relationship.
+```
+GET /users/{id}/friendship-status?with={otherUserId}
+```
+
+| Response | Meaning |
+|----------|---------|
+| `{ "status": "NONE" }` | No friendship record exists — show "Add Friend" |
+| `{ "status": "PENDING" }` | A request has been sent but not yet accepted |
+| `{ "status": "ACCEPTED" }` | Both users are friends |
 
 ### Get a user's feed
 ```
