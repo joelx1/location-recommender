@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -69,6 +70,24 @@ public class UserController {
         return userRepository.save(user);
     }
 
+    // PATCH /users/{id} - partially updates a user's profile
+    // Only fields present in the request body are updated — omitted fields are left unchanged
+    // Updatable fields: username, email, bio
+    // Note: username and email are unique columns — if the new value is already taken by another
+    // user, the database will reject the save. Full conflict handling will be added with input validation.
+    @PatchMapping("/{id}")
+    public User updateUser(@PathVariable UUID id, @RequestBody User updates) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Only apply a field if it was actually included in the request (non-null)
+        if (updates.getUsername() != null) user.setUsername(updates.getUsername());
+        if (updates.getEmail() != null)    user.setEmail(updates.getEmail());
+        if (updates.getBio() != null)      user.setBio(updates.getBio());
+
+        return userRepository.save(user);
+    }
+
     // DELETE /users/{id} - deletes a user by their UUID
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable UUID id) {
@@ -96,6 +115,31 @@ public class UserController {
     @GetMapping("/{id}/feed")
     public List<Review> getFeed(@PathVariable UUID id) {
         return reviewRepository.findFeedForUser(id, FriendshipStatus.ACCEPTED);
+    }
+
+    // GET /users/{id}/friendship-status?with={otherUserId}
+    // Returns the friendship status between two users from the perspective of the logged-in user
+    // Used by the Friend Profile screen to determine which button state to show:
+    //   NONE     → show "Add Friend"
+    //   PENDING  → show "Request Sent" (or "Respond" if they are the receiver)
+    //   ACCEPTED → show "Friends"
+    // Reuses findBetweenUsers which checks both directions, so order of {id} and ?with= doesn't matter
+    @GetMapping("/{id}/friendship-status")
+    public Map<String, String> getFriendshipStatus(
+            @PathVariable UUID id,
+            @RequestParam UUID with) {
+
+        // Verify both users exist before querying — gives a clear 404 rather than just returning NONE
+        userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        userRepository.findById(with)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Other user not found"));
+
+        String status = friendshipRepository.findBetweenUsers(id, with)
+                .map(f -> f.getStatus().name())  // returns "PENDING" or "ACCEPTED" from the enum
+                .orElse("NONE");                 // no record found means no relationship exists
+
+        return Map.of("status", status);
     }
 
     // POST /users/{id}/profile-picture - uploads a profile picture to Azure Blob Storage
