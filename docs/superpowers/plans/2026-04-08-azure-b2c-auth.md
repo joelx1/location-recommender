@@ -1,12 +1,14 @@
-# Azure B2C Authentication — Implementation Plan
+# Microsoft Entra External ID Authentication — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add end-to-end Azure B2C authentication so every API request is verified and user identity comes from a real JWT token rather than whatever the caller says it is.
+> **Note:** Azure AD B2C is no longer available for new tenants (deprecated May 2025). This plan uses Microsoft Entra External ID — the direct replacement. Endpoints use `ciamlogin.com` instead of `b2clogin.com`. Everything else is the same.
 
-**Architecture:** Frontend uses expo-auth-session to open the B2C hosted login page and receive a JWT access token. The token is attached to every API call as a Bearer header. Spring Boot validates the token's signature using B2C's public keys and auto-provisions a user row on first login via POST /auth/me.
+**Goal:** Add end-to-end Microsoft Entra External ID authentication so every API request is verified and user identity comes from a real JWT token rather than whatever the caller says it is.
 
-**Tech Stack:** Azure AD B2C (External ID), expo-auth-session, expo-crypto, expo-secure-store, Spring Security OAuth2 Resource Server
+**Architecture:** Frontend uses expo-auth-session to open the Entra External ID hosted login page and receive a JWT access token. The token is attached to every API call as a Bearer header. Spring Boot validates the token's signature using the tenant's public keys (auto-discovered via issuer URI) and auto-provisions a user row on first login via POST /auth/me.
+
+**Tech Stack:** Microsoft Entra External ID (CIAM), expo-auth-session, expo-crypto, expo-secure-store, Spring Security OAuth2 Resource Server
 
 ---
 
@@ -26,8 +28,8 @@
 | File | What changes |
 |---|---|
 | `backend/LocationReviewApp/pom.xml` | Add OAuth2 Resource Server dependency |
-| `backend/.../resources/application.properties` | Add B2C JWK URI + client ID (local only, not committed) |
-| `backend/.../resources/application.properties-template` | Update template with B2C placeholders |
+| `backend/.../resources/application.properties` | Add Entra issuer URI + client ID (local only, not committed) |
+| `backend/.../resources/application.properties-template` | Update template with Entra placeholders |
 | `backend/.../config/SecurityConfig.java` | Replace "let everything through" with JWT validation |
 | `backend/.../model/User.java` | Add `azureOid` field |
 | `backend/.../repository/UserRepository.java` | Add `findByAzureOid` query |
@@ -38,7 +40,7 @@
 ### Deleted files
 | File | Why |
 |---|---|
-| `frontend/app/(auth)/signup.tsx` | B2C's hosted page handles both sign up and sign in |
+| `frontend/app/(auth)/signup.tsx` | Entra External ID's hosted page handles both sign up and sign in |
 
 ---
 
@@ -61,63 +63,68 @@
 
 ---
 
-## Task 2: Azure B2C tenant setup (portal — no code)
+## Task 2: Microsoft Entra External ID setup (portal — no code)
 
 This is all portal work. You'll collect values here that go into config files in later tasks. Keep them written down somewhere.
 
-**What you're building:** Your own little Microsoft login system, scoped entirely to this app.
+**What you're building:** Your own little Microsoft login system for external users, scoped entirely to this app.
 
-- [ ] **Create the B2C tenant**
+> **Why "External ID"?** Azure AD B2C was retired for new tenants in May 2025. Entra External ID is the direct replacement — same concept, different portal path. Endpoints use `ciamlogin.com` instead of `b2clogin.com`.
+
+- [ ] **Create the External ID tenant**
   1. Go to [portal.azure.com](https://portal.azure.com)
-  2. Search **"Azure AD B2C"** in the top search bar → click it
-  3. Click **"Create a new Azure AD B2C Tenant"**
+  2. Search **"Microsoft Entra External ID"** in the top search bar → click it
+  3. Click **"External Tenants"** in the left sidebar → **+ Create**
   4. Fill in:
-     - Organization name: `LocationReviewApp`
-     - Initial domain name: something short like `locationreviewapp` → becomes `locationreviewapp.onmicrosoft.com`
-     - Country: yours
+     - Tenant name: `LocationReviewApp`
+     - Domain name: something short like `locationreviewapp` → becomes `locationreviewapp.onmicrosoft.com`
+     - Location: your region
      - Subscription + Resource group: use whatever's available
   5. Click **Review + Create** → **Create**
   6. Wait ~1 minute
 
-  > **What just happened?** You created a completely separate Azure directory just for your app's users. It's isolated from any org or school account — users sign up here with just an email.
+  > **What just happened?** You created a completely separate Microsoft directory just for your app's external users. It's isolated from any org or school account — users sign up here with just an email.
 
-- [ ] **Switch into the B2C tenant**
-  1. After creation, click **"Click here to navigate to the new tenant"**
-  2. Confirm you're in it — top right of the portal should show your B2C tenant name
-  
-  > Everything from here on must be done inside this B2C tenant, not your main Azure account.
+- [ ] **Switch into the external tenant**
+  1. After creation, click the link to navigate to the new tenant
+  2. Or use the directory switcher (top right of portal → Switch directory)
+  3. Confirm you're in it — top right should show your new tenant name
+
+  > Everything from here on must be done inside this external tenant, not your main Azure account.
 
 - [ ] **Register the backend API app**
 
-  The backend needs its own app registration so B2C knows which audience tokens should be validated against.
+  The backend needs its own app registration so Entra knows which audience tokens should be validated against.
 
-  1. Left sidebar → **App registrations** → **New registration**
+  1. Left sidebar → **App registrations** → **+ New registration**
   2. Fill in:
      - Name: `LocationReviewApp-Backend`
-     - Supported account types: **"Accounts in any identity provider or organizational directory"**
+     - Supported account types: **"Accounts in this organizational directory only"**
      - Redirect URI: leave blank
   3. Click **Register**
   4. Copy and save the **Application (client) ID** → call this `BACKEND_CLIENT_ID`
+  5. Copy and save the **Directory (tenant) ID** → call this `TENANT_ID`
 
   Now expose an API scope (what the frontend requests permission to call):
 
-  5. Left sidebar → **Expose an API**
-  6. Click **Add** next to "Application ID URI" → accept the default → **Save**
-  7. Click **Add a scope**:
+  6. Left sidebar → **Expose an API**
+  7. Click **Add** next to "Application ID URI" → accept the default (`api://<BACKEND_CLIENT_ID>`) → **Save**
+  8. Click **+ Add a scope**:
      - Scope name: `access_as_user`
+     - Who can consent: **Admins and users**
      - Admin consent display name: `Access LocationReviewApp API`
      - Admin consent description: `Allows the app to call the API on behalf of the signed-in user`
      - State: **Enabled**
-  8. Click **Add scope**
-  9. Copy the full scope string: `api://<BACKEND_CLIENT_ID>/access_as_user` → save as `BACKEND_SCOPE`
+  9. Click **Add scope**
+  10. Copy the full scope string: `api://<BACKEND_CLIENT_ID>/access_as_user` → save as `BACKEND_SCOPE`
 
 - [ ] **Register the frontend mobile app**
 
-  1. Left sidebar → **App registrations** → **New registration**
+  1. Left sidebar → **App registrations** → **+ New registration**
   2. Fill in:
      - Name: `LocationReviewApp-Mobile`
-     - Supported account types: **"Accounts in any identity provider or organizational directory"**
-     - Redirect URI: choose **Public client/native** from the dropdown, then enter:
+     - Supported account types: **"Accounts in this organizational directory only"**
+     - Redirect URI: choose **Public client/native (mobile & desktop)** from the dropdown, then enter:
        ```
        https://auth.expo.io/@<your-expo-username>/frontend
        ```
@@ -127,11 +134,11 @@ This is all portal work. You'll collect values here that go into config files in
 
   Grant the frontend permission to call the backend scope:
 
-  5. Left sidebar → **API permissions** → **Add a permission** → **My APIs** → **LocationReviewApp-Backend**
+  5. Left sidebar → **API permissions** → **+ Add a permission** → **My APIs** → **LocationReviewApp-Backend**
   6. Select `access_as_user` → **Add permissions**
-  7. Click **Grant admin consent** → **Yes**
+  7. Click **Grant admin consent for [tenant]** → **Yes**
 
-  Make it a public client (mobile apps can't keep secrets, so they don't use one):
+  Make it a public client (mobile apps can't keep secrets):
 
   8. Left sidebar → **Authentication**
   9. Scroll to **Advanced settings** → set **"Allow public client flows"** to **Yes**
@@ -139,17 +146,18 @@ This is all portal work. You'll collect values here that go into config files in
 
 - [ ] **Create the Sign up and Sign in user flow**
 
-  This is the actual Microsoft-hosted login page users will see.
+  This is the actual Microsoft-hosted login page your users will see.
 
-  1. Left sidebar → **User flows** (under Policies) → **New user flow**
-  2. Select **Sign up and sign in** → Version: **Recommended** → **Create**
-  3. Fill in:
-     - Name: `signupsignin` → Azure prefixes it → `B2C_1_signupsignin`
-     - Identity providers: check **Email signup**
-     - Multifactor authentication: **Disabled**
-  4. Under **User attributes** (collected at signup): check **Display Name**, **Email Address**
-  5. Under **Application claims** (what goes in the token): check **Display Name**, **Email Addresses**, **User's Object ID**
-  6. Click **Create**
+  1. In the left sidebar, look for **User flows** (may be under "External Identities" or directly in the sidebar)
+  2. Click **+ New user flow**
+  3. Select **Sign up and sign in** → click **Create**
+  4. Fill in:
+     - Name: `SignUpSignIn`
+     - Identity providers: check **Email with password**
+     - Multifactor authentication: **Disabled** (for now)
+  5. Under **User attributes** (collected at signup): check **Display Name**, **Email Address**
+  6. Under **Token claims** (what goes in the JWT): check **Display Name**, **Email Addresses**, **User's Object ID**
+  7. Click **Create**
 
   > **What just happened?** You configured the Microsoft-hosted login page. When users sign up they'll enter their email, create a password, and type a display name. All of that gets baked into the JWT token the app receives after login.
 
@@ -158,23 +166,29 @@ This is all portal work. You'll collect values here that go into config files in
   | Name | Where to find it | Example |
   |---|---|---|
   | `TENANT_NAME` | The domain prefix you chose | `locationreviewapp` |
-  | `BACKEND_CLIENT_ID` | Backend app registration → Overview | `aaaaaaaa-bbbb-cccc-...` |
-  | `FRONTEND_CLIENT_ID` | Frontend app registration → Overview | `cccccccc-dddd-eeee-...` |
-  | `POLICY_NAME` | User flows list | `B2C_1_signupsignin` |
+  | `TENANT_ID` | Backend app registration → Overview → Directory (tenant) ID | `aaaaaaaa-bbbb-...` |
+  | `BACKEND_CLIENT_ID` | Backend app registration → Overview → Application (client) ID | `cccccccc-dddd-...` |
+  | `FRONTEND_CLIENT_ID` | Frontend app registration → Overview → Application (client) ID | `eeeeeeee-ffff-...` |
   | `BACKEND_SCOPE` | Backend app → Expose an API | `api://<BACKEND_CLIENT_ID>/access_as_user` |
 
-  Your JWK set URI (used in the backend config) will be:
+  Your issuer URI (for backend Spring config) will be:
   ```
-  https://<TENANT_NAME>.b2clogin.com/<TENANT_NAME>.onmicrosoft.com/<POLICY_NAME>/discovery/v2.0/keys
+  https://<TENANT_NAME>.ciamlogin.com/<TENANT_ID>/v2.0
+  ```
+
+  Your auth/token endpoints (for frontend config) will be:
+  ```
+  Authorization: https://<TENANT_NAME>.ciamlogin.com/<TENANT_NAME>.onmicrosoft.com/oauth2/v2.0/authorize
+  Token:         https://<TENANT_NAME>.ciamlogin.com/<TENANT_NAME>.onmicrosoft.com/oauth2/v2.0/token
   ```
 
 - [ ] **Verify the user flow works**
-  1. In the portal, click on `B2C_1_signupsignin`
+  1. In the portal, find your user flow (`SignUpSignIn`)
   2. Click **Run user flow** → select your frontend app → **Run user flow**
   3. A login page should open in a new tab
   4. Sign up with a test email address
   5. After signup you'll land on `jwt.ms` — this shows you the token your app will receive
-  6. Find the `sub` claim — that's the Azure Object ID, the unique ID we'll store in our database
+  6. Find the `sub` claim — that's the Azure Object ID we'll store in our database
   7. Copy the `access_token` value — you'll paste it into Postman in Task 11
 
 ---
@@ -253,23 +267,26 @@ This is all portal work. You'll collect values here that go into config files in
 - [ ] Add these lines to your local `application.properties` (fill in real values from Task 2):
 
   ```properties
-  # Azure B2C — JWT token validation
-  # Spring fetches the public keys from this URL on startup and uses them to verify every token
-  spring.security.oauth2.resourceserver.jwt.jwk-set-uri=https://<TENANT_NAME>.b2clogin.com/<TENANT_NAME>.onmicrosoft.com/<POLICY_NAME>/discovery/v2.0/keys
+  # Microsoft Entra External ID — JWT token validation
+  # Spring auto-discovers the JWK keys from this issuer URI on startup
+  # Format: https://<TENANT_NAME>.ciamlogin.com/<TENANT_ID>/v2.0
+  spring.security.oauth2.resourceserver.jwt.issuer-uri=https://<TENANT_NAME>.ciamlogin.com/<TENANT_ID>/v2.0
 
   # The backend app's client ID — used to confirm the token was issued for our API
-  azure.b2c.client-id=<BACKEND_CLIENT_ID>
+  azure.entra.client-id=<BACKEND_CLIENT_ID>
   ```
 
 - [ ] Add the same lines (with empty values) to `application.properties-template`:
 
   ```properties
-  # Azure B2C — JWT token validation
-  # Format: https://<TENANT_NAME>.b2clogin.com/<TENANT_NAME>.onmicrosoft.com/<POLICY_NAME>/discovery/v2.0/keys
-  spring.security.oauth2.resourceserver.jwt.jwk-set-uri=
+  # Microsoft Entra External ID — JWT token validation
+  # Format: https://<TENANT_NAME>.ciamlogin.com/<TENANT_ID>/v2.0
+  # TENANT_NAME = your external tenant domain prefix (e.g. locationreviewapp)
+  # TENANT_ID   = Directory (tenant) ID from the Azure portal
+  spring.security.oauth2.resourceserver.jwt.issuer-uri=
 
   # The backend app client ID from the Azure portal (LocationReviewApp-Backend app registration)
-  azure.b2c.client-id=
+  azure.entra.client-id=
   ```
 
 - [ ] Commit the template only:
@@ -346,7 +363,7 @@ This is all portal work. You'll collect values here that go into config files in
   import org.springframework.security.oauth2.core.OAuth2Error;
   import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
   import org.springframework.security.oauth2.jwt.JwtDecoder;
-  import org.springframework.security.oauth2.jwt.JwtValidators;
+  import org.springframework.security.oauth2.jwt.JwtDecoders;
   import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
   import org.springframework.security.web.SecurityFilterChain;
   import org.springframework.web.cors.CorsConfiguration;
@@ -358,12 +375,12 @@ This is all portal work. You'll collect values here that go into config files in
   @Configuration
   public class SecurityConfig {
 
-      // Pulled from application.properties — URL where Spring fetches B2C's public keys
-      @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
-      private String jwkSetUri;
+      // The issuer URI from application.properties — Spring uses this to auto-discover the JWK keys
+      @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+      private String issuerUri;
 
-      // The backend app's client ID — every token must be issued for this app
-      @Value("${azure.b2c.client-id}")
+      // The backend app's client ID — every token must be issued for this specific app
+      @Value("${azure.entra.client-id}")
       private String backendClientId;
 
       @Bean
@@ -382,7 +399,7 @@ This is all portal work. You'll collect values here that go into config files in
               // Every request must have a valid JWT — no token = 401
               .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
 
-              // Tell Spring to look for JWT Bearer tokens
+              // Tell Spring to look for JWT Bearer tokens and use our custom decoder
               .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.decoder(jwtDecoder())));
 
           return http.build();
@@ -390,11 +407,13 @@ This is all portal work. You'll collect values here that go into config files in
 
       @Bean
       public JwtDecoder jwtDecoder() {
-          // Build a decoder using B2C's public key endpoint
-          NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+          // JwtDecoders.fromIssuerLocation() fetches the OIDC discovery document from the
+          // issuer URI and auto-discovers the JWK keys endpoint. Spring downloads the public
+          // keys from there on startup and uses them to verify every token signature.
+          NimbusJwtDecoder decoder = JwtDecoders.fromIssuerLocation(issuerUri);
 
-          // Validate the token was issued for our backend API specifically
-          // (not just any app registered in B2C)
+          // Add one extra check: the token's audience must match our backend client ID.
+          // This ensures tokens issued for other apps in the same tenant are rejected.
           decoder.setJwtValidator(token -> {
               if (token.getAudience().contains(backendClientId)) {
                   return OAuth2TokenValidatorResult.success();
@@ -422,7 +441,7 @@ This is all portal work. You'll collect values here that go into config files in
   }
   ```
 
-  > **Learning moment:** `NimbusJwtDecoder.withJwkSetUri()` downloads B2C's public keys once on startup. Every time a request comes in, Spring uses those keys to mathematically verify the token's signature. If anyone tampers with the token, the math fails and they get a 401. You write zero verification logic — Spring handles all of it.
+  > **Learning moment:** `JwtDecoders.fromIssuerLocation()` hits the Entra External ID OIDC discovery document (a well-known URL all OAuth2 providers expose) and auto-discovers where the public keys are. Spring downloads those keys once on startup and uses them to mathematically verify every token's signature. If anyone tampers with the token, the math fails and they get a 401. You write zero verification logic — Spring handles all of it.
 
 - [ ] Verify it compiles:
   ```bash
@@ -770,7 +789,6 @@ This confirms real B2C tokens work against the running backend.
 
   // ── Fill in your values from Task 2 ──────────────────────────────────────────
   const TENANT_NAME = "<TENANT_NAME>";           // e.g. "locationreviewapp"
-  const POLICY_NAME = "B2C_1_signupsignin";
   const FRONTEND_CLIENT_ID = "<FRONTEND_CLIENT_ID>";
   const BACKEND_CLIENT_ID = "<BACKEND_CLIENT_ID>";
   export const API_URL = "http://localhost:8080"; // update to deployed URL when live
@@ -778,10 +796,12 @@ This confirms real B2C tokens work against the running backend.
 
   const BACKEND_SCOPE = `api://${BACKEND_CLIENT_ID}/access_as_user`;
 
+  // Microsoft Entra External ID uses ciamlogin.com (not b2clogin.com)
+  // No policy name in the URL — the user flow is configured at the tenant level
   const discovery = {
-    authorizationEndpoint: `https://${TENANT_NAME}.b2clogin.com/${TENANT_NAME}.onmicrosoft.com/${POLICY_NAME}/oauth2/v2.0/authorize`,
-    tokenEndpoint: `https://${TENANT_NAME}.b2clogin.com/${TENANT_NAME}.onmicrosoft.com/${POLICY_NAME}/oauth2/v2.0/token`,
-    endSessionEndpoint: `https://${TENANT_NAME}.b2clogin.com/${TENANT_NAME}.onmicrosoft.com/${POLICY_NAME}/oauth2/v2.0/logout`,
+    authorizationEndpoint: `https://${TENANT_NAME}.ciamlogin.com/${TENANT_NAME}.onmicrosoft.com/oauth2/v2.0/authorize`,
+    tokenEndpoint: `https://${TENANT_NAME}.ciamlogin.com/${TENANT_NAME}.onmicrosoft.com/oauth2/v2.0/token`,
+    endSessionEndpoint: `https://${TENANT_NAME}.ciamlogin.com/${TENANT_NAME}.onmicrosoft.com/oauth2/v2.0/logout`,
   };
 
   const TOKEN_KEY = "auth_token";

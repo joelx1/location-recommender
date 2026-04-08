@@ -1,13 +1,15 @@
-# Azure B2C Auth — Design
+# Microsoft Entra External ID Auth — Design
 
 **Date:** 2026-04-08
 **Branch:** feature/azure-b2c-auth
+
+> **Note:** Azure AD B2C is no longer available for new tenants (deprecated May 2025). We're using Microsoft Entra External ID — the direct replacement. Same architecture, different portal path and endpoints (`ciamlogin.com` instead of `b2clogin.com`).
 
 ---
 
 ## What we're doing
 
-We're adding real authentication to the app using Azure Entra External ID (B2C). Right now the backend is completely open — anyone can hit any endpoint with no login required. That needs to change.
+We're adding real authentication to the app using Microsoft Entra External ID. Right now the backend is completely open — anyone can hit any endpoint with no login required. That needs to change.
 
 The plan is: users sign up and log in through a Microsoft-hosted page (we don't build the login form ourselves, Microsoft does). After they log in, Microsoft gives the app a token. The app attaches that token to every API call, and the backend checks it's real before doing anything.
 
@@ -18,18 +20,18 @@ We're going with email + password only for now. We can add Google or Microsoft a
 ## How it all fits together
 
 ```
-Azure B2C
+Microsoft Entra External ID
   → hosts the login/signup page
   → checks the user's email and password
   → hands back a signed JWT token
 
 React Native App
-  → opens the B2C login page in a browser
+  → opens the Entra External ID login page in a browser
   → gets the token back when the user logs in
   → stores it and attaches it to every API request
 
 Spring Boot Backend
-  → checks every incoming token is actually from our B2C tenant
+  → checks every incoming token is actually from our External ID tenant
   → reads who the user is from the token
   → if it's their first login, creates a user row in the database automatically
 
@@ -46,7 +48,7 @@ The backend never touches passwords at all. It just checks the token is genuine 
 
 Before writing any code we need to set up a few things in the Azure portal:
 
-1. Create an External ID (B2C) tenant — this is basically our own little Microsoft login system
+1. Create an External ID external tenant — this is basically our own little Microsoft login system
 2. Register two apps inside it — one for the backend API, one for the mobile app
 3. Create a "Sign up and sign in" user flow — this is the page users will actually see when they log in
 4. Set up a redirect URI so the app knows where to go after login
@@ -59,7 +61,7 @@ Before writing any code we need to set up a few things in the Azure portal:
 We add `spring-boot-starter-oauth2-resource-server` to `pom.xml`. This is what gives Spring Security the ability to understand and validate JWTs. Without it, Spring has no idea what a token even is.
 
 ### Two new lines in `application.properties`
-We point Spring at our B2C tenant's public keys. On startup, Spring downloads those keys and uses them to verify every token that comes in. We don't write any verification logic ourselves — Spring handles it.
+We point Spring at our External ID tenant's public keys via the issuer URI. On startup, Spring auto-discovers the JWK endpoint and downloads the public keys, then uses them to verify every token that comes in. We don't write any verification logic ourselves — Spring handles it.
 
 ### `SecurityConfig.java` gets replaced
 Right now it just says "let everything through." The new version says "every request needs a valid token — if there's no token or it's fake, return 401." CORS and CSRF config stays basically the same.
@@ -111,7 +113,7 @@ This is a global store for the user's login state. Any screen in the app can cal
 |---|---|
 | `token` | The JWT — we attach this to every API call |
 | `user` | Our database user object (id, username, email, etc.) |
-| `login()` | Opens the B2C login page |
+| `login()` | Opens the Entra External ID login page |
 | `logout()` | Clears everything and sends the user back to the login screen |
 | `isLoading` | True while the app is checking if the user's already logged in |
 
@@ -124,10 +126,10 @@ Wraps the whole app in the `AuthProvider`. Adds the gating logic:
 - User is logged in → redirect to the tabs
 
 ### `app/(auth)/login.tsx` — replaced
-The email/password form gets scrapped. Replaced with one button: "Sign in with Microsoft." Tapping it calls `login()` from the context, which opens the B2C page. Microsoft handles everything from there.
+The email/password form gets scrapped. Replaced with one button: "Sign in with Microsoft." Tapping it calls `login()` from the context, which opens the Entra External ID hosted page. Microsoft handles everything from there.
 
 ### `app/(auth)/signup.tsx` — deleted
-B2C's user flow handles sign up and sign in on the same page. We don't need a separate signup screen anymore.
+Entra External ID's user flow handles sign up and sign in on the same hosted page. We don't need a separate signup screen anymore.
 
 ### Shared `api.ts` utility — new file
 A small helper so every API call automatically gets the token attached. Screens just call it instead of writing the `Authorization` header every time.
@@ -153,11 +155,11 @@ Every login after the first one skips step 7 and just returns the existing user.
 
 ## How we test it (without needing everything connected at once)
 
-**Step 1 — B2C alone:** Open the user flow URL in a browser. Check the login page appears and we get a token back. No code needed.
+**Step 1 — Entra External ID alone:** Run the user flow from the Azure portal. Check the login page appears and we get a token back. No code needed.
 
 **Step 2 — Backend alone:** Copy that token into Postman. Hit the backend with it. Check we get 200 with a valid token and 401 without one. Check `POST /auth/me` creates a user in the database.
 
-**Step 3 — Frontend alone:** Run the Expo app. Tap login. Check the B2C page opens and we get redirected back with a token. Log the token to the console. Don't call the backend yet.
+**Step 3 — Frontend alone:** Run the Expo app. Tap login. Check the Entra External ID page opens and we get redirected back with a token. Log the token to the console. Don't call the backend yet.
 
 **Step 4 — Put it all together:** Run frontend and backend at the same time. Go through the full flow. Check the user gets created in the database and can hit protected endpoints.
 
