@@ -1,36 +1,39 @@
 import React from "react";
 import { View, Text, StyleSheet, SafeAreaView } from "react-native";
 import { Ionicons, Feather } from "@expo/vector-icons";
+import ScreenWrapper from "@/components/ScreenWrapper";
 
 const index = () => {
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Location */}
-      <View style={styles.locationCont}>
-        <Ionicons name="location-outline" size={50} />
-        <Text style={styles.locationText}>Dublin</Text>
-        {/*Hardcoded Dublin for now */}
-      </View>
+    <ScreenWrapper>
+      <SafeAreaView style={styles.container}>
+        {/* Location */}
+        <View style={styles.locationCont}>
+          <Ionicons name="location-outline" size={50} />
+          <Text style={styles.locationText}>Dublin</Text>
+          {/*Hardcoded Dublin for now */}
+        </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchBar}>
-        <Text style={styles.searchText}>Search Bar</Text>
-        <Feather name="search" size={25} />
-      </View>
+        {/* Search Bar */}
+        <View style={styles.searchBar}>
+          <Text style={styles.searchText}>Search Bar</Text>
+          <Feather name="search" size={25} />
+        </View>
 
-      {/* Popular Places */}
-      <Text style={styles.sectionTitle}>Popular Places</Text>
-      <View style={styles.largeCard}>
-        <Feather name="arrow-right" size={20} style={styles.arrowIcon} />
-      </View>
+        {/* Popular Places */}
+        <Text style={styles.sectionTitle}>Popular Places</Text>
+        <View style={styles.largeCard}>
+          <Feather name="arrow-right" size={20} style={styles.arrowIcon} />
+        </View>
 
-      {/* Friends Posts */}
-      <Text style={styles.sectionTitle}>Friends Posts</Text>
-      <View style={styles.row}>
-        <View style={styles.smallCard} />
-        <View style={styles.smallCard} />
-      </View>
-    </SafeAreaView>
+        {/* Friends Posts */}
+        <Text style={styles.sectionTitle}>Friends Posts</Text>
+        <View style={styles.row}>
+          <View style={styles.smallCard} />
+          <View style={styles.smallCard} />
+        </View>
+      </SafeAreaView>
+    </ScreenWrapper>
   );
 };
 const styles = StyleSheet.create({
@@ -38,7 +41,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F5F5F5",
     padding: 16,
-    paddingTop: 100,
+    marginTop: 80,
   },
 
   locationCont: {
