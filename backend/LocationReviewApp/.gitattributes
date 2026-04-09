@@ -1,2 +1,10 @@
+# Normalize text files
+* text=auto
+
+# Maven wrapper scripts
 /mvnw text eol=lf
+*.sh text eol=lf
+
+# Windows batch files
 *.cmd text eol=crlf
+*.bat text eol=crlf

@@ -34,6 +34,11 @@ public class Review {
     // Optional written review
     private String body;
 
+    // Optional photo — stores a permanent Azure Blob Storage URL
+    // Null if no photo was uploaded for this review
+    private String photoUrl;
+
+    @Column(name = "created_at")
     private Instant createdAt = Instant.now();
 
     public UUID getId() { return id; }
@@ -50,6 +55,9 @@ public class Review {
 
     public String getBody() { return body; }
     public void setBody(String body) { this.body = body; }
+
+    public String getPhotoUrl() { return photoUrl; }
+    public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
