@@ -32,7 +32,7 @@ export default function ScreenWrapper({
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea]} edges={edges}>
+    <SafeAreaView style={[styles.safeArea, style]} edges={edges}>
       {children}
     </SafeAreaView>
   );
