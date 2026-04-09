@@ -44,3 +44,11 @@ azure.storage.connection-string=
 
 # Name of the blob storage container used
 azure.storage.container-name=
+
+# Azure Entra External ID — JWT issuer URI
+# Spring uses this to auto-discover the JWK signing keys and validate incoming tokens
+# Format: https://<TENANT_NAME>.ciamlogin.com/<TENANT_ID>/v2.0
+spring.security.oauth2.resourceserver.jwt.issuer-uri=
+
+# Backend app's client ID — tokens must be issued for this specific app or they'll be rejected
+azure.entra.client-id=
