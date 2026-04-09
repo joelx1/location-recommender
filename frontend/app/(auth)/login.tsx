@@ -1,55 +1,75 @@
-import { StatusBar } from "expo-status-bar";
-import { View, Text, Button, TextInput, StyleSheet, TextStyle } from "react-native";
-import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import ScreenWrapper from "@/components/ScreenWrapper";
-import { router } from "expo-router";
 
-const login = () => {
+export default function LoginScreen() {
+  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin() {
+    setLoading(true);
+    try {
+      await login();
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <ScreenWrapper>
       <View style={styles.container}>
-        <title>Login</title>
-        <h1 >Login</h1>
-        
-          <Text style={styles.text}>Email</Text>
-        <TextInput style={styles.input}
-          placeholder="Enter email address:"
-          keyboardType="email-address">
-        </TextInput>
-        
-        <Text style={styles.text}>Password</Text>
-        <TextInput style={styles.input}
-          placeholder="Enter password">
-        </TextInput>
-        <br></br>
-        <br></br>
-        <Button title="Login" onPress={() => router.push("/profile")} />
-        <StatusBar style="auto" />
+        <Text style={styles.title}>Welcome</Text>
+        <Text style={styles.subtitle}>Sign in to discover places near you</Text>
+
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Sign in with Microsoft</Text>
+          )}
+        </TouchableOpacity>
       </View>
     </ScreenWrapper>
   );
-};
+}
 
-const styles=StyleSheet.create({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
   },
-  input: {
-    borderWidth: 2,
-    borderRadius: 8,
-    fontSize: 18,
-    height: 40,
-    width: 500,
-    boxSizing: "border-box",
-    
+  title: {
+    fontSize: 32,
+    fontWeight: "bold",
+    marginBottom: 8,
   },
-  text: {
-    width: 500,
-    textAlign: 'left',
-  }
+  subtitle: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 48,
+    textAlign: "center",
+  },
+  button: {
+    backgroundColor: "#0078D4",
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: "100%",
+    alignItems: "center",
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
-
-
-export default login;
