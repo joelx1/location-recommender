@@ -554,20 +554,21 @@ This is all portal work. You'll collect values here that go into config files in
                       User newUser = new User();
                       newUser.setAzureOid(azureOid);
 
-                      // B2C returns emails as a list claim called "emails" (not "email")
-                      // We handle both just in case
-                      List<String> emails = jwt.getClaimAsStringList("emails");
-                      String email = (emails != null && !emails.isEmpty())
-                              ? emails.get(0)
-                              : jwt.getClaimAsString("email");
+                      // Entra External ID returns email as a single "email" claim
+                      String email = jwt.getClaimAsString("email");
                       newUser.setEmail(email != null ? email : azureOid + "@placeholder.com");
 
-                      // Use the display name from the token, or fall back to the email prefix
-                      String name = jwt.getClaimAsString("name");
+                      // Build display name from given_name + family_name claims
+                      // Fall back to email prefix if neither is present
+                      String givenName = jwt.getClaimAsString("given_name");
+                      String familyName = jwt.getClaimAsString("family_name");
                       String fallbackUsername = email != null
                               ? email.split("@")[0]
                               : azureOid.substring(0, 8);
-                      newUser.setUsername(name != null ? name : fallbackUsername);
+                      String username = (givenName != null || familyName != null)
+                              ? ((givenName != null ? givenName : "") + " " + (familyName != null ? familyName : "")).trim()
+                              : fallbackUsername;
+                      newUser.setUsername(username);
 
                       return userRepository.save(newUser);
                   });
@@ -575,9 +576,9 @@ This is all portal work. You'll collect values here that go into config files in
   }
   ```
 
-  > **Learning moment:** `@AuthenticationPrincipal Jwt jwt` is the key annotation here. By the time this method runs, Spring Security has already verified the token's signature. You just read the claims — `jwt.getSubject()` gives you the `sub` claim (Azure OID), and `jwt.getClaimAsString("name")` gives you the display name the user typed at signup.
+  > **Learning moment:** `@AuthenticationPrincipal Jwt jwt` is the key annotation here. By the time this method runs, Spring Security has already verified the token's signature. You just read the claims — `jwt.getSubject()` gives you the `sub` claim (Azure OID), and `jwt.getClaimAsString("email")` gives you the email address.
 
-  > **Why "emails" is plural:** B2C returns email addresses in a claim called `emails` as a string array — even when there's only one. It's a B2C-specific quirk that catches people out.
+  > **Why given_name + family_name instead of name:** Entra External ID exposes `given_name` and `family_name` as separate optional claims. There's no single `name` claim available, so we combine them to build a display name.
 
 - [ ] Compile:
   ```bash
