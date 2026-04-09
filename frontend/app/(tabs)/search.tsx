@@ -6,7 +6,7 @@ const search = () => {
   return (
     <ScreenWrapper>
       <View>
-        <Text>social</Text>
+        <Text>search</Text>
       </View>
     </ScreenWrapper>
   );
