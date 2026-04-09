@@ -21,8 +21,9 @@ public class Friendship {
     private User requester;
 
     // The user who received the friend request
+    // Column is named "addressee_id" in the database — mapped explicitly to avoid mismatch
     @ManyToOne
-    @JoinColumn(name = "receiver_id", nullable = false)
+    @JoinColumn(name = "addressee_id", nullable = false)
     private User receiver;
 
     // Whether this request is still pending or has been accepted
@@ -31,6 +32,7 @@ public class Friendship {
     @Column(nullable = false)
     private FriendshipStatus status = FriendshipStatus.PENDING;
 
+    @Column(name = "created_at")
     private Instant createdAt = Instant.now();
 
     public UUID getId() { return id; }

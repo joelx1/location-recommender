@@ -30,4 +30,20 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
             "r.user.id IN (SELECT f.requester.id FROM Friendship f WHERE f.receiver.id = :userId AND f.status = :status) " +
             "ORDER BY r.createdAt DESC")
     List<Review> findFeedForUser(@Param("userId") UUID userId, @Param("status") FriendshipStatus status);
+
+    // Counts how many of a given user's accepted friends have reviewed a specific location
+    // Used by GET /locations/{id}/social-summary for the Place Details screen
+    //
+    // Follows the same bidirectional friendship pattern as findFeedForUser — the user may have
+    // been either the requester or the receiver of each friendship, so both directions are checked
+    @Query("SELECT COUNT(r) FROM Review r WHERE " +
+            "r.location.id = :locationId AND (" +
+            "r.user.id IN (SELECT f.receiver.id FROM Friendship f WHERE f.requester.id = :userId AND f.status = :status) " +
+            "OR " +
+            "r.user.id IN (SELECT f.requester.id FROM Friendship f WHERE f.receiver.id = :userId AND f.status = :status))")
+    long countFriendsReviewedLocation(
+            @Param("locationId") UUID locationId,
+            @Param("userId") UUID userId,
+            @Param("status") FriendshipStatus status
+    );
 }

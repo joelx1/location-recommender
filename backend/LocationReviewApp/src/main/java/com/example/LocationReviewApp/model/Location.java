@@ -27,7 +27,8 @@ public class Location {
 
     // Geographic coordinates stored as a PostGIS Point for map display and proximity search
     // 4326 = standard GPS coordinate system (used by Google Maps etc.)
-    @Column(columnDefinition = "geography(Point, 4326)")
+    // Column is named "geo" in the database — mapped explicitly to avoid mismatch
+    @Column(name = "geo", columnDefinition = "geography(Point, 4326)")
     private Point coordinates;
 
     // Links to the user who added this location
@@ -36,6 +37,7 @@ public class Location {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @Column(name = "created_at")
     private Instant createdAt = Instant.now();
 
     public UUID getId() { return id; }
