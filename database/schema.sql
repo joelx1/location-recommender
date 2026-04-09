@@ -71,3 +71,10 @@ CREATE TABLE friendships (
     UNIQUE (requester_id, addressee_id),  -- can't send a duplicate request to the same person
     CHECK  (requester_id <> addressee_id) -- can't send a friend request to yourself
 );
+
+-- Indexes for bidirectional friend lookups.
+-- Every feed load and friend list query checks both columns with a status filter:
+--   WHERE (requester_id = $me OR addressee_id = $me) AND status = 'accepted'
+-- Without these, those queries scan the full table.
+CREATE INDEX friendships_requester_idx ON friendships (requester_id, status);
+CREATE INDEX friendships_addressee_idx ON friendships (addressee_id, status);
