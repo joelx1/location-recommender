@@ -25,10 +25,12 @@ spring.datasource.hikari.minimum-idle=1
 spring.datasource.hikari.idle-timeout=30000
 
 # Automatically updates database schema based on your entities
-# Good for development, NOT recommended for production
+# DEVELOPMENT ONLY — change to "validate" or "none" before production
+# to prevent Hibernate from altering your live database schema on startup
 spring.jpa.hibernate.ddl-auto=update
 
 # Logs SQL queries in the console (useful for debugging)
+# DEVELOPMENT ONLY — set to false before production to avoid leaking query structure in logs
 spring.jpa.show-sql=true
 
 # Specifies the SQL dialect for PostgreSQL
@@ -36,7 +38,8 @@ spring.jpa.show-sql=true
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 
 # Always include error messages in API responses
-# Useful for debugging, but disable in production for security
+# DEVELOPMENT ONLY — set to "never" before production so internal error details
+# are not exposed to callers (they reveal stack info that attackers can use)
 server.error.include-message=always
 
 # Connection string for Azure Storage account
@@ -48,6 +51,7 @@ azure.storage.container-name=
 # Azure Entra External ID — JWT issuer URI
 # Spring uses this to auto-discover the JWK signing keys and validate incoming tokens
 # Format: https://<TENANT_NAME>.ciamlogin.com/<TENANT_ID>/v2.0
+# Format: https://<TENANT_ID>.ciamlogin.com/<TENANT_ID>/v2.0  (use tenant ID in both places, NOT tenant name)
 spring.security.oauth2.resourceserver.jwt.issuer-uri=
 
 # Backend app's client ID — tokens must be issued for this specific app or they'll be rejected

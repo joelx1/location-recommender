@@ -10,7 +10,8 @@ WebBrowser.maybeCompleteAuthSession();
 const TENANT_NAME = "locationreviewapp";
 const FRONTEND_CLIENT_ID = "e3c530ac-8ace-43b9-b9ee-3be7f9dd5b8e";
 const BACKEND_CLIENT_ID = "8f332368-f2de-45b4-82c5-931007a5c671";
-export const API_URL = "http://localhost:8080"; // swap this for the deployed URL when you go live
+// DEVELOPMENT ONLY — uses HTTP over local network. Production must use HTTPS (e.g. https://api.yourapp.com)
+export const API_URL = "http://192.168.1.51:8080";
 // ─────────────────────────────────────────────────────────────────────────────
 
 // This is the scope the frontend requests — it asks for a token scoped to our backend API

@@ -5,10 +5,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoders;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
@@ -57,16 +61,25 @@ public class SecurityConfig {
         // keys from there on startup and uses them to verify every token signature.
         NimbusJwtDecoder decoder = JwtDecoders.fromIssuerLocation(issuerUri);
 
-        // Add one extra check: the token's audience must match our backend client ID.
+        // createDefaultWithIssuer gives us: expiry check (exp), not-before check (nbf),
+        // and issuer check (iss). Without these, an expired token would still be accepted.
+        OAuth2TokenValidator<Jwt> defaultValidators = JwtValidators.createDefaultWithIssuer(issuerUri);
+
+        // Our custom check: the token's audience must match our backend client ID.
         // This ensures tokens issued for other apps in the same tenant are rejected.
-        decoder.setJwtValidator(token -> {
+        OAuth2TokenValidator<Jwt> audienceValidator = token -> {
             if (token.getAudience().contains(backendClientId)) {
                 return OAuth2TokenValidatorResult.success();
             }
             return OAuth2TokenValidatorResult.failure(
                 new OAuth2Error("invalid_token", "Token was not issued for this API", null)
             );
-        });
+        };
+
+        // DelegatingOAuth2TokenValidator runs ALL validators — both must pass.
+        // setJwtValidator() replaces the default validators entirely, so we must
+        // include the default ones explicitly here or expiry checking is lost.
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(defaultValidators, audienceValidator));
 
         return decoder;
     }
