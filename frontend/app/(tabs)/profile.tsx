@@ -1,62 +1,68 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import ProfileTab from "@/components/profile/ProfileTab";
 import ProfileHeader from "@/components/profile/ProfileHeader";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { API_BASE_URL } from "@/services/api";
+import { Feather } from "@expo/vector-icons";
 
-const mockProfile = {
-  username: "Joye",
-  bio: "Take Life Easy",
-  profilePic: "",
-  followingCount: 100,
-  followersCount: 99,
+const CURRENT_USER_ID = "869b624b-63c0-462b-997c-edfa126a1dbb";
+
+type BackendUser = {
+  id: string;
+  username: string;
+  email: string;
+  bio?: string | null;
+  profilePic?: string | null;
 };
 
-const mockPosts = [
-  {
-    id: "1",
-    locationName: "Cafe_1",
-    body: "Body placeholder",
-    rating: 5,
-    createdAt: "01/04/2026",
-  },
-  {
-    id: "2",
-    locationName: "Bar",
-    body: "Body placeholder",
-    rating: 4,
-    createdAt: "01/04/2026",
-  },
-  {
-    id: "3",
-    locationName: "Restaurant",
-    body: "Body placeholder",
-    rating: 4.5,
-    createdAt: "01/04/2026",
-  },
-  {
-    id: "4",
-    locationName: "Cafe_2",
-    body: "Body placeholder",
-    rating: 5,
-    createdAt: "29/03/2026",
-  },
-  {
-    id: "5",
-    locationName: "Cafe_3",
-    body: "Body placeholder",
-    rating: 5,
-    createdAt: "01/04/2026",
-  },
-  {
-    id: "6",
-    locationName: "Cafe_4",
-    body: "Body placeholder",
-    rating: 5,
-    createdAt: "01/04/2026",
-  },
-];
+type BackendReview = {
+  id: string;
+  rating: number;
+  body: string | null;
+  photoUrl?: string | null;
+  createdAt?: string;
+  location?: {
+    id: string;
+    name?: string;
+    category?: string;
+  };
+};
+
+type BackendFriend = {
+  id: string;
+};
+
+type ProfileData = {
+  username: string;
+  bio: string;
+  profilePic: string;
+  followingCount: number;
+  followersCount: number;
+};
+
+type PostItem = {
+  id: string;
+  locationId: string;
+  locationName: string;
+  body: string;
+  rating: number;
+  createdAt: string;
+  photoUrl?: string | null;
+  category: string;
+};
+
+const formatProfileDate = (dateString?: string) => {
+  if (!dateString) return "";
+
+  const date = new Date(dateString);
+
+  return date.toLocaleDateString("en-IE", {
+    day: "numeric",
+    month: "short",
+  });
+};
 
 const mockSaved = [
   {
@@ -81,11 +87,90 @@ const mockSaved = [
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState<"posts" | "save">("posts");
-  const [profileData, setProfileData] = useState(mockProfile);
-  const [postsData, setPostsData] = useState(mockPosts);
+  const [postsData, setPostsData] = useState<PostItem[]>([]);
   const [savedData, setSavedData] = useState(mockSaved);
   const leftColumnData = postsData.filter((_, index) => index % 2 === 0);
   const rightColumnData = postsData.filter((_, index) => index % 2 !== 0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [profileData, setProfileData] = useState<ProfileData>({
+    username: "",
+    bio: "",
+    profilePic: "",
+    followingCount: 0,
+    followersCount: 0,
+  });
+
+  const fetchProfileData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [userResponse, reviewsResponse, friendsResponse] =
+        await Promise.all([
+          fetch(`${API_BASE_URL}/users/${CURRENT_USER_ID}`),
+          fetch(`${API_BASE_URL}/users/${CURRENT_USER_ID}/reviews`),
+          fetch(`${API_BASE_URL}/users/${CURRENT_USER_ID}/friends`),
+        ]);
+
+      if (!userResponse.ok) {
+        throw new Error(
+          `User request failed with status ${userResponse.status}`,
+        );
+      }
+
+      if (!reviewsResponse.ok) {
+        throw new Error(
+          `Reviews request failed with status ${reviewsResponse.status}`,
+        );
+      }
+
+      if (!friendsResponse.ok) {
+        throw new Error(
+          `Friends request failed with status ${friendsResponse.status}`,
+        );
+      }
+
+      const userData: BackendUser = await userResponse.json();
+      const reviewsData: BackendReview[] = await reviewsResponse.json();
+      const friendsData: BackendFriend[] = await friendsResponse.json();
+
+      setProfileData({
+        username: userData.username ?? "User",
+        bio: userData.bio ?? "No bio yet",
+        profilePic: userData.profilePic ?? "",
+        followingCount: friendsData.length,
+        followersCount: friendsData.length,
+      });
+
+      setPostsData(
+        reviewsData.map((review) => ({
+          id: review.id,
+          locationId: review.location?.id ?? "",
+          locationName: review.location?.name ?? "Unknown place",
+          body: review.body ?? "",
+          rating: review.rating,
+          createdAt: formatProfileDate(review.createdAt),
+          photoUrl: review.photoUrl ?? null,
+          category: review.location?.category ?? "",
+        })),
+      );
+    } catch (err) {
+      console.log("fetch profile error:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to load profile data",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfileData();
+    }, []),
+  );
 
   return (
     <ScreenWrapper scrollable contentContainerStyle={styles.container}>
@@ -114,70 +199,110 @@ const Profile = () => {
         />
       </View>
 
-      {activeTab === "posts" ? (
-        <View style={styles.gridPlaceHolder}>
-          <View style={styles.leftColumn}>
-            {leftColumnData.map((item, index) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.gridCard,
-                  {
-                    height: index % 3 === 0 ? 160 : index % 3 === 1 ? 240 : 200,
-                  },
-                ]}
-              >
-                <Text style={{ padding: 4, fontWeight: "bold" }}>
-                  {item.locationName}
-                </Text>
-                <Text style={{ fontSize: 12, padding: 4 }}>
-                  {item.rating} star
-                </Text>
-                <Text style={{ padding: 4, fontSize: 12 }}>{item.body}</Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    padding: 4,
-                    textAlign: "right",
+      {loading ? (
+        <Text style={styles.stateText}>Loading profile...</Text>
+      ) : error ? (
+        <Text style={styles.errorText}>{error}</Text>
+      ) : activeTab === "posts" ? (
+        postsData.length === 0 ? (
+          <Text style={styles.stateText}>No posts yet.</Text>
+        ) : (
+          <View style={styles.gridPlaceHolder}>
+            <View style={styles.leftColumn}>
+              {leftColumnData.map((item, index) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.gridCard]}
+                  onPress={() => {
+                    if (item.locationId) {
+                      router.push({
+                        pathname: "/placeDetails",
+                        params: { id: item.locationId },
+                      });
+                    }
                   }}
                 >
-                  {item.createdAt}
-                </Text>
-              </View>
-            ))}
-          </View>
+                  {item.photoUrl ? (
+                    <Image
+                      source={{ uri: item.photoUrl }}
+                      style={styles.cardImage}
+                    />
+                  ) : null}
 
-          <View style={styles.rightColumn}>
-            {rightColumnData.map((item, index) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.gridCard,
-                  {
-                    height: index % 3 === 0 ? 240 : index % 3 === 1 ? 240 : 160,
-                  },
-                ]}
-              >
-                <Text style={{ padding: 4, fontWeight: "bold" }}>
-                  {item.locationName}
-                </Text>
-                <Text style={{ fontSize: 12, padding: 4 }}>
-                  {item.rating} star
-                </Text>
-                <Text style={{ padding: 4, fontSize: 12 }}>{item.body}</Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    padding: 4,
-                    textAlign: "right",
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {item.locationName}
+                    </Text>
+
+                    <View style={styles.cardMetaRow}>
+                      <View style={styles.cardRatingRow}>
+                        <Feather name="star" size={12} color="#f59e0b" />
+                        <Text style={styles.cardRating}>{item.rating}</Text>
+                        {item.category ? (
+                          <Text style={styles.cardCategoryInline}>
+                            {item.category}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    <Text style={styles.cardBody} numberOfLines={2}>
+                      {item.body || "No written review."}
+                    </Text>
+                    <Text style={styles.cardDate}>{item.createdAt}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.rightColumn}>
+              {rightColumnData.map((item, index) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.gridCard]}
+                  onPress={() => {
+                    if (item.locationId) {
+                      router.push({
+                        pathname: "/placeDetails",
+                        params: { id: item.locationId },
+                      });
+                    }
                   }}
                 >
-                  {item.createdAt}
-                </Text>
-              </View>
-            ))}
+                  {item.photoUrl ? (
+                    <Image
+                      source={{ uri: item.photoUrl }}
+                      style={styles.cardImage}
+                    />
+                  ) : null}
+
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {item.locationName}
+                    </Text>
+
+                    <View style={styles.cardMetaRow}>
+                      <View style={styles.cardRatingRow}>
+                        <Feather name="star" size={12} color="#f59e0b" />
+                        <Text style={styles.cardRating}>{item.rating}</Text>
+
+                        {item.category ? (
+                          <Text style={styles.cardCategoryInline}>
+                            {item.category}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                    <Text style={styles.cardBody} numberOfLines={2}>
+                      {item.body}
+                    </Text>
+                    <Text style={styles.cardDate}>{item.createdAt}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )
       ) : (
         <View style={styles.savedPlaceHolder}>
           {savedData.map((item) => (
@@ -242,11 +367,81 @@ const styles = StyleSheet.create({
   savedCard: {
     height: 120,
     borderRadius: 12,
-    backgroundColor: "#e7e7e7",
+    backgroundColor: "#f7f7f7",
   },
 
   gridCard: {
     borderRadius: 12,
-    backgroundColor: "#e7e7e7",
+    backgroundColor: "#f7f7f7",
+    overflow: "hidden",
+  },
+
+  stateText: {
+    fontSize: 14,
+    color: "#666",
+    paddingVertical: 8,
+  },
+
+  errorText: {
+    fontSize: 14,
+    color: "#c62828",
+    paddingVertical: 8,
+  },
+
+  cardImage: {
+    width: "90%",
+    height: 96,
+    borderRadius: 12,
+    marginTop: 6,
+    marginBottom: 6,
+    alignSelf: "center",
+  },
+
+  cardContent: {
+    padding: 12,
+  },
+
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111",
+    marginBottom: 6,
+  },
+
+  cardMetaRow: {
+    marginBottom: 6,
+  },
+
+  cardCategoryInline: {
+    fontSize: 12,
+    color: "#8a8a8a",
+    marginLeft: 4,
+    textTransform: "capitalize",
+  },
+
+  cardRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 6,
+  },
+
+  cardRating: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#444",
+  },
+
+  cardBody: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: "#333",
+    marginBottom: 8,
+  },
+
+  cardDate: {
+    textAlign: "right",
+    fontSize: 11,
+    color: "#777",
   },
 });
