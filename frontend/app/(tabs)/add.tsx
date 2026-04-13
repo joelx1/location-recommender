@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +12,7 @@ import {
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Feather from "@expo/vector-icons/Feather";
 import { API_BASE_URL } from "@/services/api";
+import * as ImagePicker from "expo-image-picker";
 
 type PlaceResult = {
   id: string;
@@ -45,7 +47,11 @@ type ReviewPayload = {
   body: string;
 };
 
-const TEST_USER_ID = "e4749887-88df-4867-bce5-545cb331fa92";
+type CreatedReview = {
+  id: string;
+};
+
+const TEST_USER_ID = "869b624b-63c0-462b-997c-edfa126a1dbb";
 
 const Add = () => {
   const [step, setStep] = useState<"search" | "review">("search");
@@ -57,6 +63,7 @@ const Add = () => {
   const [submitting, setSubmitting] = useState(false);
   const [loadingLocations, setLoadingLocations] = useState(true);
   const [locationsError, setLocationsError] = useState<string | null>(null);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -116,10 +123,62 @@ const Add = () => {
     setSelectedPlace(null);
     setRating(0);
     setReviewText("");
+    setSelectedImageUri(null);
   };
 
   const handleClearSearch = () => {
     setSearchText("");
+  };
+
+  const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        "Permission needed",
+        "Please allow photo library access to upload an image.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setSelectedImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImageUri(null);
+  };
+
+  const uploadReviewPhoto = async (reviewId: string, imageUri: string) => {
+    const fileName = imageUri.split("/").pop() ?? "review-photo.jpg";
+    const fileType = fileName.split(".").pop()?.toLowerCase() ?? "jpg";
+
+    const formData = new FormData();
+    formData.append("file", {
+      uri: imageUri,
+      name: fileName,
+      type: `image/${fileType === "jpg" ? "jpeg" : fileType}`,
+    } as any);
+
+    const response = await fetch(`${API_BASE_URL}/reviews/${reviewId}/photo`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "Photo upload failed");
+    }
+
+    return response.json();
   };
 
   const handlePostReview = async () => {
@@ -166,7 +225,11 @@ const Add = () => {
         throw new Error(errorText || `Request failed with ${response.status}`);
       }
 
-      await response.json();
+      const createdReview: CreatedReview = await response.json();
+
+      if (selectedImageUri) {
+        await uploadReviewPhoto(createdReview.id, selectedImageUri);
+      }
 
       Alert.alert("Success", "Review posted successfully.");
 
@@ -175,12 +238,24 @@ const Add = () => {
       setSelectedPlace(null);
       setRating(0);
       setReviewText("");
+      setSelectedImageUri(null);
     } catch (error) {
       console.log("post review error:", error);
-      Alert.alert(
-        "Error",
-        error instanceof Error ? error.message : "Failed to post review.",
-      );
+
+      const message =
+        error instanceof Error ? error.message : "Failed to post review.";
+
+      if (message.includes("reviews_user_id_location_id_key")) {
+        Alert.alert("You have already reviewed this place.");
+        return;
+      }
+
+      if (message.toLowerCase().includes("photo upload failed")) {
+        Alert.alert("Photo upload failed.");
+        return;
+      }
+
+      Alert.alert("Failed to post review. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -291,16 +366,41 @@ const Add = () => {
                 value={reviewText}
                 onChangeText={setReviewText}
               />
+            </View>
 
-              <View style={styles.mediaActions}>
-                <TouchableOpacity style={styles.mediaButton}>
+            <View style={styles.mediaSection}>
+              {selectedImageUri ? (
+                <View style={styles.thumbnailWrapper}>
+                  <Image
+                    source={{ uri: selectedImageUri }}
+                    style={styles.imagePreview}
+                  />
+                  <TouchableOpacity
+                    onPress={handleRemoveImage}
+                    style={styles.removeImageButton}
+                  >
+                    <Feather name="x" size={14} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.mediaButton}
+                  onPress={handlePickImage}
+                >
                   <Feather name="image" size={28} color="#333" />
                 </TouchableOpacity>
+              )}
 
-                <TouchableOpacity style={styles.mediaButton}>
-                  <Feather name="camera" size={28} color="#333" />
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={styles.mediaButton}
+                onPress={handlePickImage}
+              >
+                <Feather
+                  name={selectedImageUri ? "refresh-cw" : "camera"}
+                  size={28}
+                  color="#333"
+                />
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
@@ -456,31 +556,33 @@ const styles = StyleSheet.create({
   },
 
   editorCard: {
-    flex: 1,
+    // flex: 1,
     backgroundColor: "#f2f2f2",
     borderRadius: 26,
     paddingHorizontal: 18,
     paddingTop: 18,
     paddingBottom: 18,
-    justifyContent: "space-between",
+    // justifyContent: "space-between",
+    marginBottom: 16,
   },
 
   textInput: {
-    flex: 1,
-    minHeight: 220,
+    // flex: 1,
+    minHeight: 150,
     fontSize: 16,
     color: "#111",
   },
 
-  mediaActions: {
+  mediaSection: {
     flexDirection: "row",
     gap: 12,
-    marginTop: 20,
+    marginBottom: 20,
+    alignItems: "center",
   },
 
   mediaButton: {
-    width: 86,
-    height: 86,
+    width: 72,
+    height: 72,
     borderRadius: 18,
     backgroundColor: "#dddddd",
     alignItems: "center",
@@ -504,5 +606,30 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 17,
     fontWeight: "600",
+  },
+
+  thumbnailWrapper: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    overflow: "hidden",
+    position: "relative",
+  },
+
+  imagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+
+  removeImageButton: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
