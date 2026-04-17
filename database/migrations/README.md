@@ -25,3 +25,4 @@ V003__locations_add_score.sql
 For a fresh database, run `schema.sql` from the parent folder — it creates everything in one go.
 
 For updates, run migration scripts in order. If multiple were added since you last synced, run them lowest to highest (V001 before V002, etc.).
+

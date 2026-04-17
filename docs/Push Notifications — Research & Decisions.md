@@ -1,15 +1,15 @@
 ---
 title: Push Notifications — Research & Decisions
 project: Microsoft Project (CS335)
-updated: 2026-04-09
-status: awaiting team decisions
+updated: 2026-04-17
+status: decisions confirmed
 ---
 
 # Push Notifications — Research & Decisions
 
 > **What this doc is:** A breakdown of how proximity-based push notifications could work, the decisions the team needs to make before we build it, and what each side (DB / backend / frontend) would need to do.
 >
-> **Action needed:** Read through the open decisions section and leave a comment or reply with your preference so we can agree on an approach.
+> **Decisions confirmed 2026-04-17.** See Open Decisions section for final choices.
 
 ---
 
@@ -139,7 +139,7 @@ Please comment with your preference on each one.
 How close does the user need to be to trigger a notification?
 
 - [ ] **100m** — very close, fewer false positives, might miss places just around the corner
-- [ ] **250m** — roughly a 3-minute walk, probably the sweet spot
+- [x] **250m** — roughly a 3-minute walk, probably the sweet spot ✅ confirmed
 - [ ] **500m** — wider net, more notifications, could feel noisy
 
 ---
@@ -147,7 +147,7 @@ How close does the user need to be to trigger a notification?
 ### 2. Cooldown window
 How long before we can notify the same user about the same location again?
 
-- [ ] **1 hour** — good for real-world use
+- [x] **1 hour** — good for real-world use ✅ confirmed
 - [ ] **2 hours**
 - [ ] **24 hours** — very conservative, good for demo reliability
 
@@ -157,7 +157,7 @@ How long before we can notify the same user about the same location again?
 What star rating on a friend's review counts as a recommendation?
 
 - [ ] **3+** — includes average reviews
-- [ ] **4+** — only genuinely good places (recommended)
+- [x] **4+** — only genuinely good places (recommended) ✅ confirmed
 - [ ] **5 only** — only the best
 
 ---
@@ -165,14 +165,14 @@ What star rating on a friend's review counts as a recommendation?
 ### 4. Cold start — new users with no review history
 New users have no past reviews, so the preference filter returns nothing and they'd never get a notification.
 
-- [ ] **Option A:** Skip the preference filter until the user has written at least 3 reviews (simplest)
+- [x] **Option A:** Skip the preference filter until the user has written at least 3 reviews (simplest) ✅ confirmed
 - [ ] **Option B:** Add a category preference screen during onboarding — user picks what they like on first launch (needs a new frontend screen)
 - [ ] **Option C:** No preference filter at all until they have history — early notifications won't be personalised but at least they fire
 
 ---
 
 ### 5. Who triggers the proximity check (see table above)
-- [ ] **Option A — Frontend sends location up** (recommended for demo)
+- [x] **Option A — Frontend sends location up** (recommended for demo) ✅ confirmed — Option B if time allows
 - [ ] **Option B — Geofencing**
 - [ ] **Option C — Backend polling**
 
@@ -181,7 +181,7 @@ New users have no past reviews, so the preference filter returns nothing and the
 ### 6. How often does the app send location up? (if Option A chosen)
 - [ ] Every **30 seconds**
 - [ ] Every **60 seconds**
-- [ ] On **significant movement only** (Expo handles this automatically — recommended, saves battery)
+- [x] On **significant movement only** (Expo handles this automatically — recommended, saves battery) ✅ confirmed
 
 ---
 
