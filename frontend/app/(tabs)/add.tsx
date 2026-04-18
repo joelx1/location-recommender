@@ -12,6 +12,7 @@ import {
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Feather from "@expo/vector-icons/Feather";
 import { API_BASE_URL } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 import * as ImagePicker from "expo-image-picker";
 
 type PlaceResult = {
@@ -51,10 +52,10 @@ type CreatedReview = {
   id: string;
 };
 
-const TEST_USER_ID = "869b624b-63c0-462b-997c-edfa126a1dbb";
-
 const Add = () => {
+  const { token, user } = useAuth();
   const [step, setStep] = useState<"search" | "review">("search");
+
   const [searchText, setSearchText] = useState("");
   const [locations, setLocations] = useState<PlaceResult[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
@@ -71,7 +72,9 @@ const Add = () => {
         setLoadingLocations(true);
         setLocationsError(null);
 
-        const response = await fetch(`${API_BASE_URL}/locations`);
+        const response = await fetch(`${API_BASE_URL}/locations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (!response.ok) {
           throw new Error(`Failed to load locations (${response.status})`);
@@ -170,6 +173,7 @@ const Add = () => {
 
     const response = await fetch(`${API_BASE_URL}/reviews/${reviewId}/photo`, {
       method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
 
@@ -187,11 +191,6 @@ const Add = () => {
       return;
     }
 
-    if (!TEST_USER_ID) {
-      Alert.alert("Missing test user", "Please set TEST_USER_ID first.");
-      return;
-    }
-
     if (rating < 1 || rating > 5) {
       Alert.alert("Missing rating", "Please select a rating.");
       return;
@@ -199,7 +198,7 @@ const Add = () => {
 
     const payload: ReviewPayload = {
       user: {
-        id: TEST_USER_ID,
+        id: user!.id,
       },
       location: {
         id: selectedPlace.id,
@@ -215,6 +214,7 @@ const Add = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });

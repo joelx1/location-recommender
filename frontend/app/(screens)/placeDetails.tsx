@@ -4,6 +4,7 @@ import ScreenWrapper from "@/components/ScreenWrapper";
 import Feather from "@expo/vector-icons/Feather";
 import { router, useLocalSearchParams } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 
 type BackendLocation = {
   id: string;
@@ -35,6 +36,7 @@ type PlaceDetailsData = {
 };
 
 const PlaceDetails = () => {
+  const { token } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   console.log("placeDetails id:", id);
@@ -55,9 +57,10 @@ const PlaceDetails = () => {
         setLoading(true);
         setError(null);
 
+        const authHeaders = { Authorization: `Bearer ${token}` };
         const [locationResponse, reviewsResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/locations/${id}`),
-          fetch(`${API_BASE_URL}/locations/${id}/reviews`),
+          fetch(`${API_BASE_URL}/locations/${id}`, { headers: authHeaders }),
+          fetch(`${API_BASE_URL}/locations/${id}/reviews`, { headers: authHeaders }),
         ]);
 
         if (!locationResponse.ok) {

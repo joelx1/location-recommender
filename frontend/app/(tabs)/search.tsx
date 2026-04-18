@@ -11,6 +11,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import Feather from "@expo/vector-icons/Feather";
 import { router } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 
 type BackendCoordinates = {
   type: string;
@@ -59,6 +60,7 @@ const INITIAL_REGION = {
 };
 
 const Search = () => {
+  const { token } = useAuth();
   const mapRef = useRef<MapView | null>(null);
   const [searchText, setSearchText] = useState("");
   const [locations, setLocations] = useState<Location[]>([]);
@@ -74,7 +76,9 @@ const Search = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`${API_BASE_URL}/locations`);
+        const response = await fetch(`${API_BASE_URL}/locations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`);

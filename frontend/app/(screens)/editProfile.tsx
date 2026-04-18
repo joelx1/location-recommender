@@ -12,9 +12,8 @@ import ScreenWrapper from "@/components/ScreenWrapper";
 import Feather from "@expo/vector-icons/Feather";
 import { router } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 import * as ImagePicker from "expo-image-picker";
-
-const CURRENT_USER_ID = "869b624b-63c0-462b-997c-edfa126a1dbb";
 
 type BackendUser = {
   id: string;
@@ -25,6 +24,7 @@ type BackendUser = {
 };
 
 const EditProfile = () => {
+  const { token, user } = useAuth();
   const [username, setUsername] = useState("");
   const [bio, setBio] = useState("");
   const [email, setEmail] = useState("");
@@ -37,9 +37,9 @@ const EditProfile = () => {
       try {
         setLoading(true);
 
-        const response = await fetch(
-          `${API_BASE_URL}/users/${CURRENT_USER_ID}`,
-        );
+        const response = await fetch(`${API_BASE_URL}/users/${user!.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (!response.ok) {
           throw new Error(`User request failed with status ${response.status}`);
@@ -66,10 +66,11 @@ const EditProfile = () => {
     try {
       setSaving(true);
 
-      const response = await fetch(`${API_BASE_URL}/users/${CURRENT_USER_ID}`, {
+      const response = await fetch(`${API_BASE_URL}/users/${user!.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           username,
@@ -110,9 +111,10 @@ const EditProfile = () => {
     } as any);
 
     const response = await fetch(
-      `${API_BASE_URL}/users/${CURRENT_USER_ID}/profile-picture`,
+      `${API_BASE_URL}/users/${user!.id}/profile-picture`,
       {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       },
     );
