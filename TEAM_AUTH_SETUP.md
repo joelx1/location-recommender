@@ -2,7 +2,7 @@
 
 If you're seeing a **redirect URI mismatch** when you try to log in, that's because Azure doesn't recognise your device yet. I need to add you manually, it only takes a second.
 
-Send me your **local IP** and **Expo username** in the group chat and I'll get it sorted.
+Send me your **local IP address** in the group chat and I'll get it sorted.
 
 ---
 
@@ -20,37 +20,26 @@ Send me your **local IP** and **Expo username** in the group chat and I'll get i
 
 ---
 
-## How to find your Expo username
+## What gets added for you
 
-Go to [expo.dev](https://expo.dev) and sign in — your username is in the top right corner. Or just open Expo Go on your phone, it shows at the top.
-
----
-
-## What I'm adding for each of you
-
-Two things per person so you're covered either way:
-
-| | Format |
-|-|--------|
-| Local | `exp://YOUR_IP:8081` |
-| Proxy | `https://auth.expo.io/@YOUR_EXPO_USERNAME/frontend` |
+Once you send your IP, I'll register `exp://YOUR_IP:8081` in Azure and you're good to go.
 
 ---
 
 ## Status
 
-| Person | Local | Proxy |
-|--------|-------|-------|
-| Felix | ✅ | ⏳ |
-| Joye | ⏳ need IP | ✅ |
-| Joel | ⏳ | ⏳ |
-| Hamed | ⏳ | ⏳ |
-| Jack James | ⏳ | ⏳ |
-| Jack Duffin | ⏳ | ⏳ |
+| Person | Added |
+|--------|-------|
+| Felix | ✅ |
+| Joye | ⏳ need IP |
+| Joel | ⏳ need IP |
+| Hamed | ⏳ need IP |
+| Jack James | ⏳ need IP |
+| Jack Duffin | ⏳ need IP |
 
 ---
 
 ## Heads up
 
-- Your IP can change if you switch networks or reconnect — if login randomly breaks again just send me the new one
-- Your phone and laptop need to be on the same Wi-Fi for the local one to work. If they're not, run `npx expo start --tunnel` instead
+- Your IP can change if you switch networks or reconnect — if login randomly breaks just send me the new one
+- Your phone and laptop need to be on the same Wi-Fi, otherwise it won't work
