@@ -49,18 +49,6 @@ Two URIs per person — both needed to cover different ways of running the app:
 
 ---
 
-## Adding them in Azure (Felix)
-
-1. [portal.azure.com](https://portal.azure.com) → **App registrations** → **`LocationReviewApp-Mobile`** → **Authentication**
-
-**Local URI** → scroll to **"Mobile and desktop applications"** → Add URI → `exp://THEIR_IP:8081`
-
-**Proxy URI** → scroll to **"Web"** → Add URI → `https://auth.expo.io/@THEIR_USERNAME/frontend`
-
-2. Hit **Save** — they can log in straight away, no restarts needed
-
----
-
 ## Current status
 
 | Person | Local URI | Proxy URI |
