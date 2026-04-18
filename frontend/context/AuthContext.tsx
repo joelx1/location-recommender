@@ -10,8 +10,8 @@ WebBrowser.maybeCompleteAuthSession();
 const TENANT_NAME = "locationreviewapp";
 const FRONTEND_CLIENT_ID = "e3c530ac-8ace-43b9-b9ee-3be7f9dd5b8e";
 const BACKEND_CLIENT_ID = "8f332368-f2de-45b4-82c5-931007a5c671";
-// DEVELOPMENT ONLY — uses HTTP over local network. Production must use HTTPS (e.g. https://api.yourapp.com)
-export const API_URL = "http://192.168.1.51:8080";
+// Set EXPO_PUBLIC_API_BASE_URL in your .env file — see .env.example
+export const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
 // ─────────────────────────────────────────────────────────────────────────────
 
 // This is the scope the frontend requests — it asks for a token scoped to our backend API
