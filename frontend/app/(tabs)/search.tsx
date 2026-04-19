@@ -11,19 +11,21 @@ import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import Feather from "@expo/vector-icons/Feather";
 import { router } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
+import type { BackendLocation } from "@/types/place";
+import { mapBackendLocationToPlaceResult } from "@/services/placeMapper";
 
-type BackendCoordinates = {
-  type: string;
-  coordinates: [number, number];
-};
+// type BackendCoordinates = {
+//   type: string;
+//   coordinates: [number, number];
+// };
 
-type BackendLocation = {
-  id: string;
-  name: string;
-  category: string;
-  address: string;
-  coordinates: BackendCoordinates | null;
-};
+// type BackendLocation = {
+//   id: string;
+//   name: string;
+//   category: string;
+//   address: string;
+//   coordinates: BackendCoordinates | null;
+// };
 
 type BackendReview = {
   id: string;
@@ -83,16 +85,29 @@ const Search = () => {
         const data: BackendLocation[] = await response.json();
 
         const mappedLocations: Location[] = data
-          .filter((location) => location.coordinates?.coordinates?.length === 2)
-          .map((location) => ({
-            id: location.id,
-            title: location.name,
-            latitude: location.coordinates!.coordinates[1],
-            longitude: location.coordinates!.coordinates[0],
-            category: location.category,
-            address: location.address ?? "No address provided",
+          .map(mapBackendLocationToPlaceResult)
+          .filter((place) => place.latitude != null && place.longitude != null)
+          .map((place) => ({
+            id: place.id,
+            title: place.name,
+            latitude: place.latitude!,
+            longitude: place.longitude!,
+            category: place.category,
+            address: place.address,
             reviews: [],
           }));
+
+        // const mappedLocations: Location[] = data
+        //   .filter((location) => location.coordinates?.coordinates?.length === 2)
+        //   .map((location) => ({
+        //     id: location.id,
+        //     title: location.name,
+        //     latitude: location.coordinates!.coordinates[1],
+        //     longitude: location.coordinates!.coordinates[0],
+        //     category: location.category,
+        //     address: location.address ?? "No address provided",
+        //     reviews: [],
+        //   }));
 
         setLocations(mappedLocations);
       } catch (err) {

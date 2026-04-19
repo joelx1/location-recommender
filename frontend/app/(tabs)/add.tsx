@@ -13,28 +13,37 @@ import ScreenWrapper from "@/components/ScreenWrapper";
 import Feather from "@expo/vector-icons/Feather";
 import { API_BASE_URL } from "@/services/api";
 import * as ImagePicker from "expo-image-picker";
+import type { BackendLocation, PlaceResult } from "@/types/place";
+import {
+  mapBackendLocationToPlaceResult,
+  filterPlacesByKeyword,
+} from "@/services/placeMapper";
+import PlaceSearchList from "@/components/places/PlaceSearchList";
+import { searchGooglePlaces } from "@/services/googlePlaces";
 
-type PlaceResult = {
-  id: string;
-  name: string;
-  address: string;
-  category: string;
-  latitude?: number;
-  longitude?: number;
-};
+// reuse component from place.ts
+// type PlaceResult = {
+//   id: string;
+//   name: string;
+//   address: string;
+//   category: string;
+//   latitude?: number;
+//   longitude?: number;
+// };
 
-type BackendCoordinates = {
-  type: string;
-  coordinates: [number, number];
-};
+// type BackendCoordinates = {
+//   type: string;
+//   coordinates: [number, number];
+// };
 
-type BackendLocation = {
-  id: string;
-  name: string;
-  address: string | null;
-  category: string;
-  coordinates: BackendCoordinates | null;
-};
+// reuse component from place.ts
+// type BackendLocation = {
+//   id: string;
+//   name: string;
+//   address: string | null;
+//   category: string;
+//   coordinates: BackendCoordinates | null;
+// };
 
 type ReviewPayload = {
   user: {
@@ -64,6 +73,8 @@ const Add = () => {
   const [loadingLocations, setLoadingLocations] = useState(true);
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
+  const [googleResults, setGoogleResults] = useState<PlaceResult[]>([]);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -78,14 +89,17 @@ const Add = () => {
         }
 
         const data: BackendLocation[] = await response.json();
-        const mappedLocations: PlaceResult[] = data.map((location) => ({
-          id: location.id,
-          name: location.name,
-          address: location.address ?? "No address provided",
-          category: location.category,
-          latitude: location.coordinates?.coordinates?.[1],
-          longitude: location.coordinates?.coordinates?.[0],
-        }));
+
+        const mappedLocations = data.map(mapBackendLocationToPlaceResult);
+
+        // const mappedLocations: PlaceResult[] = data.map((location) => ({
+        //   id: location.id,
+        //   name: location.name,
+        //   address: location.address ?? "No address provided",
+        //   category: location.category,
+        //   latitude: location.coordinates?.coordinates?.[1],
+        //   longitude: location.coordinates?.coordinates?.[0],
+        // }));
 
         setLocations(mappedLocations);
       } catch (error) {
@@ -101,17 +115,98 @@ const Add = () => {
     fetchLocations();
   }, []);
 
-  const filteredResults = locations.filter((place) => {
-    const keyword = searchText.trim().toLowerCase();
+  useEffect(() => {
+    let active = true;
 
-    if (!keyword) return true;
+    const runGoogleSearch = async () => {
+      const keyword = searchText.trim();
 
-    return (
-      place.name.toLowerCase().includes(keyword) ||
-      place.address.toLowerCase().includes(keyword) ||
-      place.category.toLowerCase().includes(keyword)
-    );
-  });
+      if (keyword.length < 2) {
+        setGoogleResults([]);
+        return;
+      }
+
+      try {
+        setLoadingGoogle(true);
+        const results = await searchGooglePlaces(keyword);
+
+        if (active) {
+          setGoogleResults(results);
+        }
+      } catch (error) {
+        console.log("google places search error:", error);
+
+        if (active) {
+          setGoogleResults([]);
+        }
+      } finally {
+        if (active) {
+          setLoadingGoogle(false);
+        }
+      }
+    };
+
+    runGoogleSearch();
+
+    return () => {
+      active = false;
+    };
+  }, [searchText]);
+
+  // const filteredResults = filterPlacesByKeyword(locations, searchText);
+  const filteredDbResults = filterPlacesByKeyword(locations, searchText);
+
+  const combinedResults = [
+    ...filteredDbResults,
+    ...googleResults.filter(
+      (googlePlace) =>
+        !filteredDbResults.some(
+          (dbPlace) =>
+            dbPlace.googlePlaceId &&
+            dbPlace.googlePlaceId === googlePlace.googlePlaceId,
+        ),
+    ),
+  ];
+
+  // const filteredResults = locations.filter((place) => {
+  //   const keyword = searchText.trim().toLowerCase();
+
+  //   if (!keyword) return true;
+
+  //   return (
+  //     place.name.toLowerCase().includes(keyword) ||
+  //     place.address.toLowerCase().includes(keyword) ||
+  //     place.category.toLowerCase().includes(keyword)
+  //   );
+  // });
+
+  const createLocationFromGooglePlace = async (place: PlaceResult) => {
+    const payload = {
+      name: place.name,
+      address: place.address,
+      category: place.category,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      googlePlaceId: place.googlePlaceId,
+    };
+
+    const response = await fetch(`${API_BASE_URL}/locations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        errorText || `Failed to create location (${response.status})`,
+      );
+    }
+
+    return response.json();
+  };
 
   const handleSelectPlace = (place: PlaceResult) => {
     setSelectedPlace(place);
@@ -197,19 +292,27 @@ const Add = () => {
       return;
     }
 
-    const payload: ReviewPayload = {
-      user: {
-        id: TEST_USER_ID,
-      },
-      location: {
-        id: selectedPlace.id,
-      },
-      rating,
-      body: reviewText.trim(),
-    };
-
     try {
       setSubmitting(true);
+
+      let locationId = selectedPlace.id;
+
+      if (selectedPlace.source === "google") {
+        const createdLocation =
+          await createLocationFromGooglePlace(selectedPlace);
+        locationId = createdLocation.id;
+      }
+
+      const payload: ReviewPayload = {
+        user: {
+          id: TEST_USER_ID,
+        },
+        location: {
+          id: locationId,
+        },
+        rating,
+        body: reviewText.trim(),
+      };
 
       const response = await fetch(`${API_BASE_URL}/reviews`, {
         method: "POST",
@@ -267,8 +370,17 @@ const Add = () => {
         {step === "search" ? (
           <View style={styles.searchStep}>
             <Text style={styles.pageTitle}>Add a Review</Text>
+            <PlaceSearchList
+              value={searchText}
+              onChangeText={setSearchText}
+              onClear={handleClearSearch}
+              results={combinedResults}
+              loading={loadingLocations}
+              error={locationsError}
+              onSelectPlace={handleSelectPlace}
+            />
 
-            <View style={styles.searchBar}>
+            {/* <View style={styles.searchBar}>
               <Feather name="search" size={18} color="#666" />
               <TextInput
                 style={styles.searchInput}
@@ -312,7 +424,7 @@ const Add = () => {
                   </TouchableOpacity>
                 ))
               )}
-            </View>
+            </View> */}
           </View>
         ) : (
           <View style={styles.reviewStep}>
