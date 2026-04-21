@@ -8,6 +8,8 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,7 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.LocationReviewApp.model.Review;
+import com.example.LocationReviewApp.model.User;
 import com.example.LocationReviewApp.repository.ReviewRepository;
+import com.example.LocationReviewApp.repository.UserRepository;
 import com.example.LocationReviewApp.service.AzureBlobService;
 
 // Handles all API requests related to reviews
@@ -32,6 +36,9 @@ public class ReviewController {
     // Injects the ReviewRepository so we can query the database
     @Autowired
     private ReviewRepository reviewRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private AzureBlobService blobService;
@@ -49,25 +56,48 @@ public class ReviewController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));
     }
 
-    // POST /reviews - creates a new review from the request body
+    // POST /reviews - creates a new review
+    // The author is derived from the JWT — the body must not be trusted for identity.
     @PostMapping
-    public Review createReview(@RequestBody Review review) {
+    public Review createReview(@RequestBody Review review, @AuthenticationPrincipal Jwt jwt) {
+        // Look up the real user from the JWT and set them as the author — ignore any user
+        // the client may have put in the request body to prevent posting as someone else
+        User author = userRepository.findByAzureOid(jwt.getSubject())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Authenticated user not found — call /auth/me first"));
+        review.setUser(author);
         return reviewRepository.save(review);
     }
 
     // DELETE /reviews/{id} - deletes a review by its UUID
+    // Only the author of the review can delete it.
     @DeleteMapping("/{id}")
-    public void deleteReview(@PathVariable UUID id) {
+    public void deleteReview(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));
+
+        if (!review.getUser().getAzureOid().equals(jwt.getSubject())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete your own reviews");
+        }
+
         reviewRepository.deleteById(id);
     }
 
     // POST /reviews/{id}/photo - uploads a photo for a review to Azure Blob Storage
     // Photo is optional — reviews without a photo simply have photoUrl as null
+    // Only the author of the review can upload a photo to it.
     @PostMapping("/{id}/photo")
-    public ResponseEntity<Map<String, String>> uploadReviewPhoto(@PathVariable UUID id, @RequestParam("file") MultipartFile file)
+    public ResponseEntity<Map<String, String>> uploadReviewPhoto(@PathVariable UUID id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal Jwt jwt)
     {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));
+
+        if (!review.getUser().getAzureOid().equals(jwt.getSubject())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "You can only add photos to your own reviews"));
+        }
 
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/"))

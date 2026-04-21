@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -64,21 +66,21 @@ public class UserController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
-    // POST /users - creates a new user from the request body
-    @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userRepository.save(user);
-    }
-
     // PATCH /users/{id} - partially updates a user's profile
     // Only fields present in the request body are updated — omitted fields are left unchanged
     // Updatable fields: username, email, bio
     // Note: username and email are unique columns — if the new value is already taken by another
-    // user, the database will reject the save. Full conflict handling will be added with input validation.
+    // user, the database will reject the save.
     @PatchMapping("/{id}")
-    public User updateUser(@PathVariable UUID id, @RequestBody User updates) {
+    public User updateUser(@PathVariable UUID id, @RequestBody User updates,
+                           @AuthenticationPrincipal Jwt jwt) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Only the account owner can update their own profile
+        if (!user.getAzureOid().equals(jwt.getSubject())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update your own profile");
+        }
 
         // Only apply a field if it was actually included in the request (non-null)
         if (updates.getUsername() != null) user.setUsername(updates.getUsername());
@@ -90,7 +92,15 @@ public class UserController {
 
     // DELETE /users/{id} - deletes a user by their UUID
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable UUID id) {
+    public void deleteUser(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Only the account owner can delete their own account
+        if (!user.getAzureOid().equals(jwt.getSubject())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete your own account");
+        }
+
         userRepository.deleteById(id);
     }
 
@@ -145,10 +155,18 @@ public class UserController {
     // POST /users/{id}/profile-picture - uploads a profile picture to Azure Blob Storage
     // stores the returned blob URL in the database
     @PostMapping("/{id}/profile-picture")
-    public ResponseEntity<Map<String, String>> uploadProfilePicture(@PathVariable UUID id, @RequestParam("file") MultipartFile file)
+    public ResponseEntity<Map<String, String>> uploadProfilePicture(@PathVariable UUID id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal Jwt jwt)
     {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Only the account owner can upload their own profile picture
+        if (!user.getAzureOid().equals(jwt.getSubject())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "You can only update your own profile picture"));
+        }
 
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/"))
