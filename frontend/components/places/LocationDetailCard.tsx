@@ -1,0 +1,139 @@
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+
+export type LocationReviewPreview = {
+  id: string;
+  user: string;
+  rating: number;
+  body: string;
+};
+
+export type MapLocation = {
+  id: string;
+  title: string;
+  latitude: number;
+  longitude: number;
+  category: string;
+  address: string;
+  reviews: LocationReviewPreview[];
+};
+
+type Props = {
+  location: MapLocation;
+  onClose: () => void;
+  onViewMore: () => void;
+};
+
+const LocationDetailCard = ({ location, onClose, onViewMore }: Props) => {
+  return (
+    <View style={styles.detailCard}>
+      <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+        <Feather name="x" size={20} color="#666" />
+      </TouchableOpacity>
+
+      <Text style={styles.title}>{location.title}</Text>
+      <Text style={styles.category}>{location.category}</Text>
+      <Text style={styles.address}>{location.address}</Text>
+
+      <Text style={styles.reviewSection}>Reviews</Text>
+
+      {location.reviews.length > 0 ? (
+        location.reviews.map((review) => (
+          <View key={review.id} style={styles.reviewCard}>
+            <Text style={styles.reviewUser}>
+              {review.user} · {review.rating}/5
+            </Text>
+            <Text style={styles.reviewBody}>{review.body}</Text>
+          </View>
+        ))
+      ) : (
+        <Text style={styles.noReviewsText}>No reviews yet.</Text>
+      )}
+
+      <TouchableOpacity style={styles.viewMoreButton} onPress={onViewMore}>
+        <Text style={styles.viewMoreText}>View more</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+export default LocationDetailCard;
+
+const styles = StyleSheet.create({
+  detailCard: {
+    position: "absolute",
+    bottom: 20,
+    left: 16,
+    right: 16,
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+  },
+
+  closeButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 1,
+  },
+
+  title: {
+    fontWeight: "bold",
+    fontSize: 18,
+    marginBottom: 4,
+  },
+
+  category: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 4,
+  },
+
+  address: {
+    fontSize: 14,
+    color: "#444",
+    marginBottom: 10,
+  },
+
+  reviewSection: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginTop: 8,
+    marginBottom: 8,
+  },
+
+  reviewCard: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+
+  reviewUser: {
+    fontSize: 13,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+
+  reviewBody: {
+    fontSize: 13,
+    color: "#333",
+  },
+
+  noReviewsText: {
+    fontSize: 13,
+    color: "#777",
+  },
+
+  viewMoreButton: {
+    marginTop: 8,
+    alignSelf: "flex-end",
+  },
+
+  viewMoreText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#2563eb",
+  },
+});

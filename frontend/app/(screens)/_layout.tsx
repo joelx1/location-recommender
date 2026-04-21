@@ -5,6 +5,7 @@ export default function ScreensLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="editProfile" />
       <Stack.Screen name="placeDetails" />
+      <Stack.Screen name="addReview" />
     </Stack>
   );
 }
