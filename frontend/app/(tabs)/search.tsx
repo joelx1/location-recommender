@@ -7,24 +7,16 @@ import {
 } from "react-native";
 import React, { useRef, useState, useEffect } from "react";
 // import ScreenWrapper from "@/components/ScreenWrapper";
-import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { Marker } from "react-native-maps";
 import Feather from "@expo/vector-icons/Feather";
 import { router } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
+import type { PlaceResult } from "@/types/place";
 import { useAuth } from "@/context/AuthContext";
-
-type BackendCoordinates = {
-  type: string;
-  coordinates: [number, number];
-};
-
-type BackendLocation = {
-  id: string;
-  name: string;
-  category: string;
-  address: string;
-  coordinates: BackendCoordinates | null;
-};
+import { useGooglePlaceSearch } from "@/hooks/useGooglePlaceSearch";
+import LocationDetailCard from "@/components/places/LocationDetailCard";
+import type { MapLocation } from "@/components/places/LocationDetailCard";
+import { useBackendPlaces } from "@/hooks/useBackendPlaces";
 
 type BackendReview = {
   id: string;
@@ -35,96 +27,94 @@ type BackendReview = {
   };
 };
 
-type Review = {
-  id: string;
-  user: string;
-  rating: number;
-  body: string;
-};
-
-type Location = {
-  id: string;
-  title: string;
-  latitude: number;
-  longitude: number;
-  category: string;
-  address: string;
-  reviews: Review[];
-};
-
+// Temporary
 const INITIAL_REGION = {
-  latitude: 53.381,
-  longitude: -6.592,
-  latitudeDelta: 0.01,
-  longitudeDelta: 0.01,
+  latitude: 53.3498,
+  longitude: -6.2603,
+  latitudeDelta: 0.02,
+  longitudeDelta: 0.02,
 };
 
 const Search = () => {
   const { token } = useAuth();
   const mapRef = useRef<MapView | null>(null);
   const [searchText, setSearchText] = useState("");
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
+  const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(
     null,
   );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { googleResults, loadingGoogle } = useGooglePlaceSearch(searchText, {
+    enabled: searchText !== selectedLocation?.title,
+  });
 
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const { places, error } = useBackendPlaces(token);
 
-        const response = await fetch(`${API_BASE_URL}/locations`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  const locations: MapLocation[] = places
+    .filter((place) => place.latitude != null && place.longitude != null)
+    .map((place) => ({
+      id: place.id,
+      title: place.name,
+      latitude: place.latitude!,
+      longitude: place.longitude!,
+      category: place.category,
+      address: place.address,
+      reviews: [],
+    }));
 
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
-        }
+  const normalizePlaceText = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
 
-        const data: BackendLocation[] = await response.json();
-
-        const mappedLocations: Location[] = data
-          .filter((location) => location.coordinates?.coordinates?.length === 2)
-          .map((location) => ({
-            id: location.id,
-            title: location.name,
-            latitude: location.coordinates!.coordinates[1],
-            longitude: location.coordinates!.coordinates[0],
-            category: location.category,
-            address: location.address ?? "No address provided",
-            reviews: [],
-          }));
-
-        setLocations(mappedLocations);
-      } catch (err) {
-        console.log("fetch error:", err);
-        setError(
-          err instanceof Error ? err.message : "Failed to load locations",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLocations();
-  }, []);
+  const searchKeyword = normalizePlaceText(searchText);
 
   const filteredLocations = locations.filter((location) =>
-    location.title.toLowerCase().includes(searchText.toLowerCase()),
+    normalizePlaceText(location.title).includes(searchKeyword),
+  );
+
+  const googleResultsWithoutExistingLocations = googleResults.filter(
+    (googlePlace) =>
+      !locations.some((location) => {
+        const sameName =
+          normalizePlaceText(location.title) ===
+          normalizePlaceText(googlePlace.name);
+
+        const sameAddress =
+          normalizePlaceText(location.address) ===
+          normalizePlaceText(googlePlace.address);
+
+        return sameName && sameAddress;
+      }),
   );
 
   const showSuggestions =
     searchText.trim().length > 0 &&
-    filteredLocations.length > 0 &&
-    searchText !== selectedLocation?.title;
+    searchText !== selectedLocation?.title &&
+    (filteredLocations.length > 0 ||
+      googleResultsWithoutExistingLocations.length > 0 ||
+      loadingGoogle);
 
-  const handleSelectLocation = async (location: Location) => {
+  const handleSelectLocation = async (location: MapLocation) => {
+    setSelectedLocation({
+      ...location,
+      reviews: [],
+    });
+
+    mapRef.current?.animateToRegion({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+
+    setSearchText(location.title);
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/locations/${location.id}/reviews`,
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       if (!response.ok) {
@@ -146,21 +136,26 @@ const Search = () => {
       };
 
       setSelectedLocation(enrichedLocation);
-
-      mapRef.current?.animateToRegion({
-        latitude: location.latitude,
-        longitude: location.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
-
-      setSearchText(location.title);
     } catch (err) {
-      setSelectedLocation({
-        ...location,
-        reviews: [],
-      });
+      console.log("reviews fetch error:", err);
     }
+  };
+
+  const handleSelectGooglePlace = (place: PlaceResult) => {
+    router.push({
+      pathname: "/addReview",
+      params: {
+        source: "google",
+        id: place.id,
+        googlePlaceId: place.googlePlaceId,
+        name: place.name,
+        address: place.address,
+        category: place.category,
+        latitude: place.latitude != null ? String(place.latitude) : undefined,
+        longitude:
+          place.longitude != null ? String(place.longitude) : undefined,
+      },
+    });
   };
 
   const handleClearSelection = () => {
@@ -179,7 +174,6 @@ const Search = () => {
 
       <MapView
         style={StyleSheet.absoluteFill}
-        provider={PROVIDER_GOOGLE}
         initialRegion={INITIAL_REGION}
         showsUserLocation
         showsMyLocationButton
@@ -237,48 +231,43 @@ const Search = () => {
                 </Text>
               </TouchableOpacity>
             ))}
+            {loadingGoogle ? (
+              <View style={styles.suggestionItem}>
+                <Text style={styles.suggestionMeta}>Searching places...</Text>
+              </View>
+            ) : null}
+
+            {googleResultsWithoutExistingLocations.slice(0, 5).map((place) => (
+              <TouchableOpacity
+                key={`google-${place.id}`}
+                style={styles.suggestionItem}
+                onPress={() => handleSelectGooglePlace(place)}
+              >
+                <View style={styles.suggestionTitleRow}>
+                  <Text style={styles.suggestionTitle}>{place.name}</Text>
+                  <Text style={styles.newPlaceBadge}>New</Text>
+                </View>
+
+                <Text style={styles.suggestionMeta}>
+                  {place.category} · {place.address}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         )}
       </View>
 
       {selectedLocation && (
-        <View style={styles.detailCard}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={handleClearSelection}
-          >
-            <Feather name="x" size={20} color="#666" />
-          </TouchableOpacity>
-          <Text style={styles.title}>{selectedLocation.title}</Text>
-          <Text style={styles.category}>{selectedLocation.category}</Text>
-          <Text style={styles.address}>{selectedLocation.address}</Text>
-
-          <Text style={styles.reviewSection}>Reviews</Text>
-          {selectedLocation.reviews.length > 0 ? (
-            selectedLocation.reviews.map((review) => (
-              <View key={review.id} style={styles.reviewCard}>
-                <Text style={styles.reviewUser}>
-                  {review.user} · {review.rating}/5
-                </Text>
-                <Text style={styles.reviewBody}>{review.body}</Text>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.noReviewsText}>No reviews yet.</Text>
-          )}
-
-          <TouchableOpacity
-            style={styles.viewMoreButton}
-            onPress={() =>
-              router.push({
-                pathname: "/placeDetails",
-                params: { id: selectedLocation.id },
-              })
-            }
-          >
-            <Text style={styles.viewMoreText}>View more</Text>
-          </TouchableOpacity>
-        </View>
+        <LocationDetailCard
+          location={selectedLocation}
+          onClose={handleClearSelection}
+          onViewMore={() =>
+            router.push({
+              pathname: "/placeDetails",
+              params: { id: selectedLocation.id },
+            })
+          }
+        />
       )}
     </View>
     // </ScreenWrapper>
@@ -290,63 +279,6 @@ export default Search;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  detailCard: {
-    position: "absolute",
-    bottom: 20,
-    left: 16,
-    right: 16,
-    backgroundColor: "white",
-    borderRadius: 16,
-    padding: 16,
-  },
-  closeButton: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    zIndex: 1,
-  },
-
-  title: {
-    fontWeight: "bold",
-    fontSize: 18,
-    marginBottom: 4,
-  },
-
-  category: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 4,
-  },
-  address: {
-    fontSize: 14,
-    color: "#444",
-    marginBottom: 10,
-  },
-  reviewSection: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  reviewCard: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 8,
-  },
-  reviewUser: {
-    fontSize: 13,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  reviewBody: {
-    fontSize: 13,
-    color: "#333",
-  },
-  noReviewsText: {
-    fontSize: 13,
-    color: "#777",
   },
 
   searchWrapper: {
@@ -372,17 +304,6 @@ const styles = StyleSheet.create({
     color: "#111",
   },
 
-  viewMoreButton: {
-    marginTop: 8,
-    alignSelf: "flex-end",
-  },
-
-  viewMoreText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#2563eb",
-  },
-
   suggestionsList: {
     marginTop: 8,
     backgroundColor: "white",
@@ -400,10 +321,29 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
 
+  suggestionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+
+  newPlaceBadge: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#2563eb",
+    backgroundColor: "#eaf2ff",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+
   suggestionTitle: {
     fontSize: 14,
     fontWeight: "600",
     color: "#111",
+    flex: 1,
   },
 
   suggestionMeta: {
