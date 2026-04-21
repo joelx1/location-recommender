@@ -11,8 +11,7 @@ import ScreenWrapper from "@/components/ScreenWrapper";
 import Feather from "@expo/vector-icons/Feather";
 import { router, useFocusEffect } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
-
-const CURRENT_USER_ID = "e4749887-88df-4867-bce5-545cb331fa92";
+import { useAuth } from "@/context/AuthContext";
 
 type FeedReview = {
   id: string;
@@ -43,6 +42,7 @@ const formatFeedDate = (dateString: string) => {
 };
 
 const Social = () => {
+  const { token, user } = useAuth();
   const [feed, setFeed] = useState<FeedReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +53,8 @@ const Social = () => {
       setError(null);
 
       const response = await fetch(
-        `${API_BASE_URL}/users/${CURRENT_USER_ID}/feed`,
+        `${API_BASE_URL}/users/${user!.id}/feed`,
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       if (!response.ok) {

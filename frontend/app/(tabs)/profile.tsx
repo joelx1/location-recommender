@@ -1,13 +1,12 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import ProfileTab from "@/components/profile/ProfileTab";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import { router, useFocusEffect } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
 import { Feather } from "@expo/vector-icons";
-
-const CURRENT_USER_ID = "869b624b-63c0-462b-997c-edfa126a1dbb";
+import { useAuth } from "@/context/AuthContext";
 
 type BackendUser = {
   id: string;
@@ -55,9 +54,7 @@ type PostItem = {
 
 const formatProfileDate = (dateString?: string) => {
   if (!dateString) return "";
-
   const date = new Date(dateString);
-
   return date.toLocaleDateString("en-IE", {
     day: "numeric",
     month: "short",
@@ -65,27 +62,13 @@ const formatProfileDate = (dateString?: string) => {
 };
 
 const mockSaved = [
-  {
-    id: "1",
-    locationName: "Cafe",
-    rating: 5,
-    createdAt: "01/04/2026",
-  },
-  {
-    id: "2",
-    locationName: "Bar",
-    rating: 5,
-    createdAt: "01/04/2026",
-  },
-  {
-    id: "3",
-    locationName: "Restaurant",
-    rating: 5,
-    createdAt: "01/04/2026",
-  },
+  { id: "1", locationName: "Cafe", rating: 5, createdAt: "01/04/2026" },
+  { id: "2", locationName: "Bar", rating: 5, createdAt: "01/04/2026" },
+  { id: "3", locationName: "Restaurant", rating: 5, createdAt: "01/04/2026" },
 ];
 
 const Profile = () => {
+  const { user, token, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<"posts" | "save">("posts");
   const [postsData, setPostsData] = useState<PostItem[]>([]);
   const [savedData, setSavedData] = useState(mockSaved);
@@ -103,33 +86,27 @@ const Profile = () => {
   });
 
   const fetchProfileData = async () => {
+    if (!user?.id) return;
+    const authHeaders = { Authorization: `Bearer ${token}` };
     try {
       setLoading(true);
       setError(null);
 
       const [userResponse, reviewsResponse, friendsResponse] =
         await Promise.all([
-          fetch(`${API_BASE_URL}/users/${CURRENT_USER_ID}`),
-          fetch(`${API_BASE_URL}/users/${CURRENT_USER_ID}/reviews`),
-          fetch(`${API_BASE_URL}/users/${CURRENT_USER_ID}/friends`),
+          fetch(`${API_BASE_URL}/users/${user.id}`, { headers: authHeaders }),
+          fetch(`${API_BASE_URL}/users/${user.id}/reviews`, { headers: authHeaders }),
+          fetch(`${API_BASE_URL}/users/${user.id}/friends`, { headers: authHeaders }),
         ]);
 
       if (!userResponse.ok) {
-        throw new Error(
-          `User request failed with status ${userResponse.status}`,
-        );
+        throw new Error(`User request failed with status ${userResponse.status}`);
       }
-
       if (!reviewsResponse.ok) {
-        throw new Error(
-          `Reviews request failed with status ${reviewsResponse.status}`,
-        );
+        throw new Error(`Reviews request failed with status ${reviewsResponse.status}`);
       }
-
       if (!friendsResponse.ok) {
-        throw new Error(
-          `Friends request failed with status ${friendsResponse.status}`,
-        );
+        throw new Error(`Friends request failed with status ${friendsResponse.status}`);
       }
 
       const userData: BackendUser = await userResponse.json();
@@ -158,9 +135,7 @@ const Profile = () => {
       );
     } catch (err) {
       console.log("fetch profile error:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to load profile data",
-      );
+      setError(err instanceof Error ? err.message : "Failed to load profile data");
     } finally {
       setLoading(false);
     }
@@ -169,7 +144,7 @@ const Profile = () => {
   useFocusEffect(
     useCallback(() => {
       fetchProfileData();
-    }, []),
+    }, [user?.id, token]),
   );
 
   return (
@@ -190,7 +165,6 @@ const Profile = () => {
           active={activeTab === "posts"}
           onPress={() => setActiveTab("posts")}
         />
-
         <ProfileTab
           label="Save"
           icon="bookmark"
@@ -209,10 +183,10 @@ const Profile = () => {
         ) : (
           <View style={styles.gridPlaceHolder}>
             <View style={styles.leftColumn}>
-              {leftColumnData.map((item, index) => (
+              {leftColumnData.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.gridCard]}
+                  style={styles.gridCard}
                   onPress={() => {
                     if (item.locationId) {
                       router.push({
@@ -223,29 +197,21 @@ const Profile = () => {
                   }}
                 >
                   {item.photoUrl ? (
-                    <Image
-                      source={{ uri: item.photoUrl }}
-                      style={styles.cardImage}
-                    />
+                    <Image source={{ uri: item.photoUrl }} style={styles.cardImage} />
                   ) : null}
-
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={1}>
                       {item.locationName}
                     </Text>
-
                     <View style={styles.cardMetaRow}>
                       <View style={styles.cardRatingRow}>
                         <Feather name="star" size={12} color="#f59e0b" />
                         <Text style={styles.cardRating}>{item.rating}</Text>
                         {item.category ? (
-                          <Text style={styles.cardCategoryInline}>
-                            {item.category}
-                          </Text>
+                          <Text style={styles.cardCategoryInline}>{item.category}</Text>
                         ) : null}
                       </View>
                     </View>
-
                     <Text style={styles.cardBody} numberOfLines={2}>
                       {item.body || "No written review."}
                     </Text>
@@ -256,10 +222,10 @@ const Profile = () => {
             </View>
 
             <View style={styles.rightColumn}>
-              {rightColumnData.map((item, index) => (
+              {rightColumnData.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.gridCard]}
+                  style={styles.gridCard}
                   onPress={() => {
                     if (item.locationId) {
                       router.push({
@@ -270,26 +236,18 @@ const Profile = () => {
                   }}
                 >
                   {item.photoUrl ? (
-                    <Image
-                      source={{ uri: item.photoUrl }}
-                      style={styles.cardImage}
-                    />
+                    <Image source={{ uri: item.photoUrl }} style={styles.cardImage} />
                   ) : null}
-
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle} numberOfLines={1}>
                       {item.locationName}
                     </Text>
-
                     <View style={styles.cardMetaRow}>
                       <View style={styles.cardRatingRow}>
                         <Feather name="star" size={12} color="#f59e0b" />
                         <Text style={styles.cardRating}>{item.rating}</Text>
-
                         {item.category ? (
-                          <Text style={styles.cardCategoryInline}>
-                            {item.category}
-                          </Text>
+                          <Text style={styles.cardCategoryInline}>{item.category}</Text>
                         ) : null}
                       </View>
                     </View>
@@ -306,26 +264,20 @@ const Profile = () => {
       ) : (
         <View style={styles.savedPlaceHolder}>
           {savedData.map((item) => (
-            <View key={item.id} style={[styles.savedCard]}>
-              <Text style={{ padding: 4, fontWeight: "bold" }}>
-                {item.locationName}
-              </Text>
-              <Text style={{ fontSize: 12, padding: 4 }}>
-                {item.rating} star
-              </Text>
-              <Text
-                style={{
-                  fontSize: 10,
-                  padding: 4,
-                  textAlign: "right",
-                }}
-              >
+            <View key={item.id} style={styles.savedCard}>
+              <Text style={{ padding: 4, fontWeight: "bold" }}>{item.locationName}</Text>
+              <Text style={{ fontSize: 12, padding: 4 }}>{item.rating} star</Text>
+              <Text style={{ fontSize: 10, padding: 4, textAlign: "right" }}>
                 {item.createdAt}
               </Text>
             </View>
           ))}
         </View>
       )}
+
+      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+        <Text style={styles.logoutText}>Log out</Text>
+      </TouchableOpacity>
     </ScreenWrapper>
   );
 };
@@ -334,7 +286,6 @@ export default Profile;
 
 const styles = StyleSheet.create({
   container: {
-    // flex: 1,
     padding: 12,
   },
 
@@ -345,7 +296,6 @@ const styles = StyleSheet.create({
   },
 
   gridPlaceHolder: {
-    // flex: 1,
     flexDirection: "row",
     gap: 8,
   },
@@ -443,5 +393,19 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontSize: 11,
     color: "#777",
+  },
+
+  logoutButton: {
+    marginTop: 32,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#f7f7f7",
+    alignItems: "center",
+  },
+
+  logoutText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#c62828",
   },
 });
