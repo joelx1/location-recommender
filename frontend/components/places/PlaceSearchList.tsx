@@ -9,6 +9,8 @@ import {
 import Feather from "@expo/vector-icons/Feather";
 import type { PlaceResult } from "@/types/place";
 
+// Reusable place search UI for screens that show a search box and selectable place results.
+
 type Props = {
   value: string;
   onChangeText: (text: string) => void;

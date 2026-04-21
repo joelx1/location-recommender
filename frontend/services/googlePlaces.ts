@@ -23,6 +23,8 @@ export type GooglePlaceResult = {
   };
 };
 
+// Maps a Google Places API result into the shared PlaceResult shape.
+
 export const mapGooglePlaceToPlaceResult = (
   place: GooglePlaceResult,
 ): PlaceResult => ({
@@ -35,6 +37,8 @@ export const mapGooglePlaceToPlaceResult = (
   longitude: place.geometry?.location?.lng,
   source: "google",
 });
+
+// Searches Google Places and returns results in the same shape as saved database places.
 
 export const searchGooglePlaces = async (
   query: string,

@@ -27,6 +27,7 @@ type BackendReview = {
   };
 };
 
+// Temporary
 const INITIAL_REGION = {
   latitude: 53.3498,
   longitude: -6.2603,

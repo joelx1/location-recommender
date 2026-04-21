@@ -2,6 +2,8 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 
+// Reusable bottom card for showing a selected map location and its review preview.
+
 export type LocationReviewPreview = {
   id: string;
   user: string;

@@ -3,6 +3,8 @@ import { API_BASE_URL } from "@/services/api";
 import type { BackendLocation, PlaceResult } from "@/types/place";
 import { mapBackendLocationToPlaceResult } from "@/services/placeMapper";
 
+// Shared hook for screens that need saved database places
+
 export const useBackendPlaces = (token: string | null) => {
   const [places, setPlaces] = useState<PlaceResult[]>([]);
   const [loading, setLoading] = useState(true);

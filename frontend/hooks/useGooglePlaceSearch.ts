@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import type { PlaceResult } from "@/types/place";
 import { searchGooglePlaces } from "@/services/googlePlaces";
 
+// Shared hook for Google Places text search.
+// Pass the search text and optionally disable it when a screen should not query Google.
+
 export const useGooglePlaceSearch = (
   searchText: string,
   options?: {

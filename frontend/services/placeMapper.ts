@@ -1,5 +1,7 @@
 import type { BackendLocation, PlaceResult } from "@/types/place";
 
+// Converts backend Location JSON into the shared PlaceResult shape used by place search UI.
+
 export const mapBackendLocationToPlaceResult = (
   location: BackendLocation,
 ): PlaceResult => ({
@@ -11,6 +13,8 @@ export const mapBackendLocationToPlaceResult = (
   longitude: location.coordinates?.coordinates?.[0],
   source: "db",
 });
+
+// Shared keyword filter for saved places; matches name, address, or category.
 
 export const filterPlacesByKeyword = (
   places: PlaceResult[],
