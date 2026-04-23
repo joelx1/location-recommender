@@ -7,10 +7,10 @@ import * as SecureStore from "expo-secure-store";
 WebBrowser.maybeCompleteAuthSession();
 
 // ── Azure Entra External ID config ───────────────────────────────────────────
-const TENANT_NAME = "locationreviewapp";
-const FRONTEND_CLIENT_ID = "e3c530ac-8ace-43b9-b9ee-3be7f9dd5b8e";
-const BACKEND_CLIENT_ID = "8f332368-f2de-45b4-82c5-931007a5c671";
-// Set EXPO_PUBLIC_API_BASE_URL in your .env file — see .env.example
+// All values come from .env — see .env.example. Never hardcode IDs here.
+const TENANT_NAME = process.env.EXPO_PUBLIC_AZURE_TENANT_NAME!;
+const FRONTEND_CLIENT_ID = process.env.EXPO_PUBLIC_AZURE_FRONTEND_CLIENT_ID!;
+const BACKEND_CLIENT_ID = process.env.EXPO_PUBLIC_AZURE_BACKEND_CLIENT_ID!;
 export const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
 // ─────────────────────────────────────────────────────────────────────────────
 
