@@ -11,7 +11,7 @@ const TENANT_NAME = "locationreviewapp";
 const FRONTEND_CLIENT_ID = "e3c530ac-8ace-43b9-b9ee-3be7f9dd5b8e";
 const BACKEND_CLIENT_ID = "8f332368-f2de-45b4-82c5-931007a5c671";
 // Set EXPO_PUBLIC_API_BASE_URL in your .env file — see .env.example
-export const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
+export const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 // ─────────────────────────────────────────────────────────────────────────────
 
 // This is the scope the frontend requests — it asks for a token scoped to our backend API
