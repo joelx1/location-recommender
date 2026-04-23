@@ -7,8 +7,12 @@ type ProfileHeaderProps = {
   bio: string;
   followingCount: number;
   followersCount: number;
+  friendCount?: number;
+  showActions?: boolean;
+  profilePic?: string;
+  onPressFriendCount?: () => void;
   onPressEdit?: () => void;
-  onPressSettings?: () => void;
+  onPressLogout?: () => void;
 };
 
 const ProfileHeader = ({
@@ -16,38 +20,69 @@ const ProfileHeader = ({
   bio,
   followingCount,
   followersCount,
+  friendCount,
+  showActions = true,
+  profilePic,
+  onPressFriendCount,
   onPressEdit,
-  onPressSettings,
+  onPressLogout,
 }: ProfileHeaderProps) => {
   return (
     <View style={styles.header}>
       <View style={styles.profileTopRow}>
         <View style={styles.avatarRow}>
           <Image
-            source={require("@/assets/images/default-avatar.png")}
+            source={
+              profilePic
+                ? { uri: profilePic }
+                : require("@/assets/images/default-avatar.png")
+            }
             style={styles.avatar}
           />
 
           <View style={styles.userInfo}>
             <View style={styles.usernameRow}>
               <Text style={styles.username}>{username}</Text>
-              <TouchableOpacity style={styles.editButton} onPress={onPressEdit}>
-                <Feather name="edit" size={18} color="black" />
-              </TouchableOpacity>
+              {showActions && (
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={onPressEdit}
+                >
+                  <Feather name="edit" size={18} color="black" />
+                </TouchableOpacity>
+              )}
             </View>
 
             <Text style={styles.bio}>{bio}</Text>
 
             <View style={styles.statsRow}>
-              <Text style={styles.statText}>Following {followingCount}</Text>
-              <Text style={styles.statText}>Followers {followersCount}</Text>
+              {friendCount !== undefined ? (
+                <TouchableOpacity
+                  onPress={onPressFriendCount}
+                  disabled={!onPressFriendCount}
+                  style={styles.statButton}
+                >
+                  <Text style={styles.statText}>Friends {friendCount}</Text>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <Text style={styles.statText}>
+                    Following {followingCount}
+                  </Text>
+                  <Text style={styles.statText}>
+                    Followers {followersCount}
+                  </Text>
+                </>
+              )}
             </View>
           </View>
         </View>
 
-        <TouchableOpacity onPress={onPressSettings}>
-          <Feather name="settings" size={24} color="black" />
-        </TouchableOpacity>
+        {showActions && (
+          <TouchableOpacity onPress={onPressLogout}>
+            <Feather name="log-out" size={22} color="black" />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -92,6 +127,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    paddingRight: 8,
   },
 
   avatarRow: {
@@ -118,5 +154,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
+  },
+  statButton: {
+    paddingVertical: 2,
   },
 });
