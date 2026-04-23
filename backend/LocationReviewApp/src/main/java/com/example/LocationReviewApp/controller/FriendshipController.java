@@ -1,18 +1,25 @@
 package com.example.LocationReviewApp.controller;
 
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.example.LocationReviewApp.dto.FriendRequest;
 import com.example.LocationReviewApp.model.Friendship;
 import com.example.LocationReviewApp.model.FriendshipStatus;
 import com.example.LocationReviewApp.model.User;
 import com.example.LocationReviewApp.repository.FriendshipRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-import java.util.UUID;
 
 // Handles all API requests related to friendships
 // Base URL for all endpoints in this controller: /friends
@@ -53,6 +60,9 @@ public class FriendshipController {
         Friendship friendship = new Friendship();
         friendship.setRequester(requester);
         friendship.setReceiver(receiver);
+
+        // Temporary use for testing
+        friendship.setStatus(FriendshipStatus.ACCEPTED);
         // Status defaults to PENDING in the entity — no need to set it explicitly
 
         return friendshipRepository.save(friendship);
