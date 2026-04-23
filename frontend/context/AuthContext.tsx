@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<DbUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: "frontend", path: "auth" });
+  const redirectUri = AuthSession.makeRedirectUri({ scheme: "frontend" });
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
