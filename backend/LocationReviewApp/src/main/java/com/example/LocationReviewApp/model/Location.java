@@ -40,6 +40,9 @@ public class Location {
     @Column(name = "created_at")
     private Instant createdAt = Instant.now();
 
+    @Column(name = "image")
+    private String image;
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -60,4 +63,7 @@ public class Location {
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+    public String getimage() { return image; }
+    public void setimage(String image) { this.image = image; }
 }
