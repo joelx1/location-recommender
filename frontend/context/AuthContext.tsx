@@ -8,8 +8,8 @@ WebBrowser.maybeCompleteAuthSession();
 
 // ── Azure Entra External ID config ───────────────────────────────────────────
 const TENANT_NAME = "locationreviewapp";
-const FRONTEND_CLIENT_ID = "e3c530ac-8ace-43b9-b9ee-3be7f9dd5b8e";
-const BACKEND_CLIENT_ID = "8f332368-f2de-45b4-82c5-931007a5c671";
+const FRONTEND_CLIENT_ID = "bdf8ace0-d7a5-4c7b-bd9e-0eeae9ee0881";
+const BACKEND_CLIENT_ID = "7a30bda2-0b4d-4b28-803f-6df60ced1f48";
 // Set EXPO_PUBLIC_API_BASE_URL in your .env file — see .env.example
 export const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 // ─────────────────────────────────────────────────────────────────────────────

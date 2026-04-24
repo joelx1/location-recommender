@@ -27,5 +27,5 @@ azure.storage.sas-expiry-days=30
 azure.storage.container-name=profilepics
 
 # ---- Azure Entra External ID (needed once auth backend is merged) ----
-spring.security.oauth2.resourceserver.jwt.issuer-uri=https://locationreviewapp.ciamlogin.com/4b3cac24-21c9-4816-9325-21a3df6a31c0/v2.0
-azure.entra.client-id=8f332368-f2de-45b4-82c5-931007a5c671
+spring.security.oauth2.resourceserver.jwt.issuer-uri=https://4b3cac24-21c9-4816-9325-21a3df6a31c0.ciamlogin.com/4b3cac24-21c9-4816-9325-21a3df6a31c0/v2.0
+azure.entra.client-id=7a30bda2-0b4d-4b28-803f-6df60ced1f48
