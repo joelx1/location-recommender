@@ -27,6 +27,13 @@ type BackendReview = {
   };
 };
 
+type FeedReview = {
+  id: string;
+  location?: {
+    id: string;
+  };
+};
+
 // Temporary
 const INITIAL_REGION = {
   latitude: 53.3498,
@@ -36,17 +43,55 @@ const INITIAL_REGION = {
 };
 
 const Search = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const mapRef = useRef<MapView | null>(null);
   const [searchText, setSearchText] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(
     null,
   );
+  const [friendReviewCountByLocation, setFriendReviewCountByLocation] =
+    useState<Map<string, number>>(new Map());
   const { googleResults, loadingGoogle } = useGooglePlaceSearch(searchText, {
     enabled: searchText !== selectedLocation?.title,
   });
 
   const { places, error } = useBackendPlaces(token);
+
+  useEffect(() => {
+    const fetchFriendFeed = async () => {
+      if (!token || !user?.id) {
+        setFriendReviewCountByLocation(new Map());
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${user.id}/feed`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Feed request failed with status ${response.status}`);
+        }
+
+        const data: FeedReview[] = await response.json();
+        const counts = new Map<string, number>();
+
+        data.forEach((item) => {
+          const locationId = item.location?.id;
+          if (!locationId) return;
+
+          counts.set(locationId, (counts.get(locationId) ?? 0) + 1);
+        });
+
+        setFriendReviewCountByLocation(counts);
+      } catch (err) {
+        console.log("fetch friend feed error:", err);
+        setFriendReviewCountByLocation(new Map());
+      }
+    };
+
+    fetchFriendFeed();
+  }, [token, user?.id]);
 
   const locations: MapLocation[] = places
     .filter((place) => place.latitude != null && place.longitude != null)
@@ -58,6 +103,7 @@ const Search = () => {
       category: place.category,
       address: place.address,
       reviews: [],
+      friendReviewCount: friendReviewCountByLocation.get(place.id) ?? 0,
     }));
 
   const normalizePlaceText = (value: string) =>
@@ -186,6 +232,11 @@ const Search = () => {
               latitude: location.latitude,
               longitude: location.longitude,
             }}
+            pinColor={
+              location.friendReviewCount && location.friendReviewCount > 0
+                ? "#f59e0b"
+                : undefined
+            }
             onPress={() => handleSelectLocation(location)}
           />
         ))}
