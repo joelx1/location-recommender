@@ -29,7 +29,12 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.hamed270.frontend"
+      "package": "com.hamed270.frontend",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBb8lkrSZb8i9e9Hm0MS9JTPTn1_axg-eg"
+        }
+      }
     },
     "web": {
       "output": "static",

@@ -3,7 +3,7 @@ import type { PlaceResult } from "@/types/place";
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
 if (!GOOGLE_PLACES_API_KEY) {
-  throw new Error("EXPO_PUBLIC_GOOGLE_PLACES_API_KEY is not set");
+  console.warn("EXPO_PUBLIC_GOOGLE_PLACES_API_KEY is not set — Google Places search will be disabled");
 }
 
 export type GooglePlacesTextSearchResponse = {
@@ -43,6 +43,8 @@ export const mapGooglePlaceToPlaceResult = (
 export const searchGooglePlaces = async (
   query: string,
 ): Promise<PlaceResult[]> => {
+  if (!GOOGLE_PLACES_API_KEY) return [];
+
   const trimmedQuery = query.trim();
 
   if (!trimmedQuery) {
