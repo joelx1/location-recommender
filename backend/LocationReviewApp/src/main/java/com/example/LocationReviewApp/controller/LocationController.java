@@ -2,6 +2,7 @@ package com.example.LocationReviewApp.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.locationtech.jts.geom.Coordinate;
@@ -10,6 +11,8 @@ import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,100 +28,137 @@ import com.example.LocationReviewApp.dto.LocationSummary;
 import com.example.LocationReviewApp.model.FriendshipStatus;
 import com.example.LocationReviewApp.model.Location;
 import com.example.LocationReviewApp.model.Review;
+import com.example.LocationReviewApp.model.User;
 import com.example.LocationReviewApp.repository.LocationRepository;
 import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
 
-// Handles all API requests related to locations
-// Base URL for all endpoints in this controller: /locations
 @RestController
 @RequestMapping("/locations")
 public class LocationController {
 
-    // Injects the LocationRepository so we can query the database
     @Autowired
     private LocationRepository locationRepository;
 
-    // Injects ReviewRepository to fetch reviews for a location
     @Autowired
     private ReviewRepository reviewRepository;
 
-    // Injects UserRepository to look up the user who created a location
     @Autowired
     private UserRepository userRepository;
 
-    // GET /locations - returns all locations in the database
+    // GET /locations — returns all locations in the database
     @GetMapping
     public List<Location> getAllLocations() {
         return locationRepository.findAll();
     }
 
-    // GET /locations/{id} - returns a single location by its UUID
-    // Returns the full Location entity including coordinates as GeoJSON
+    // GET /locations/{id} — returns a single location by its UUID
     @GetMapping("/{id}")
     public Location getLocationById(@PathVariable UUID id) {
         return locationRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Location not found"));
     }
 
-    // GET /locations/{id}/summary - returns a location with review stats
+    // GET /locations/{id}/summary — returns a location with review stats
     // Use this instead of /{id} when you need reviewCount, averageRating, or bayesianScore
-    // e.g. the Place Details screen — saves making a second call to /reviews
-    // Note: coordinates are returned as flat latitude/longitude numbers rather than GeoJSON
     @GetMapping("/{id}/summary")
     public LocationSummary getLocationSummary(@PathVariable UUID id) {
         return locationRepository.findSummaryById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Location not found"));
     }
 
     // GET /locations/{id}/social-summary?userId={currentUserId}
-    // Returns how many of the current user's accepted friends have reviewed this location
-    // Used by the Place Details screen to show e.g. "3 of your friends have been here"
-    // Returns 0 if the location exists but none of the user's friends have reviewed it
+    // Returns how many of the current user's accepted friends have reviewed this location.
+    // Used by the Place Details screen to show e.g. "3 of your friends have been here".
     @GetMapping("/{id}/social-summary")
     public Map<String, Long> getSocialSummary(
             @PathVariable UUID id,
             @RequestParam UUID userId) {
 
-        // Verify both the location and the user exist before querying
         if (!locationRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Location not found");
         }
         userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
 
-        long count = reviewRepository.countFriendsReviewedLocation(id, userId, FriendshipStatus.ACCEPTED);
+        long count = reviewRepository.countFriendsReviewedLocation(
+                id, userId, FriendshipStatus.ACCEPTED);
         return Map.of("friendsReviewedCount", count);
     }
 
-    // POST /locations - creates a new location from the request body
-    // Accepts plain lat/lng and converts to a PostGIS Point
+    // POST /locations — creates a new location from the request body.
+    // The creator is derived from the JWT — callers cannot create locations on behalf
+    // of someone else.
+    //
+    // Google Places deduplication:
+    // If googlePlacesId is provided in the request body, we check whether a location
+    // with that ID already exists in the database before creating a new row.
+    // If a match is found, the existing location is returned immediately (200 OK).
+    // This prevents duplicate rows when multiple users select the same Google place.
+    // If googlePlacesId is absent (manual entry), the check is skipped and the
+    // location is created normally.
     @PostMapping
-    public Location createLocation(@RequestBody LocationRequest request) {
+    public Location createLocation(@RequestBody LocationRequest request,
+                                   @AuthenticationPrincipal Jwt jwt) {
+
+        // Deduplication check — only runs when a Google Places ID was provided
+        if (request.getGooglePlacesId() != null && !request.getGooglePlacesId().isBlank()) {
+            Optional<Location> existing = locationRepository.findByGooglePlacesId(
+                    request.getGooglePlacesId());
+            if (existing.isPresent()) {
+                // Return the existing location rather than creating a duplicate.
+                // 200 rather than 201 — nothing was created.
+                return existing.get();
+            }
+        }
+
         GeometryFactory gf = new GeometryFactory(new PrecisionModel(), 4326);
-        Point point = gf.createPoint(new Coordinate(request.getLongitude(), request.getLatitude()));
+        Point point = gf.createPoint(
+                new Coordinate(request.getLongitude(), request.getLatitude()));
+
+        // Derive the creator from the JWT — never trust the request body for identity
+        User creator = userRepository.findByAzureOid(jwt.getSubject())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Authenticated user not found — call /auth/me first"));
 
         Location location = new Location();
         location.setName(request.getName());
         location.setCategory(request.getCategory());
         location.setAddress(request.getAddress());
         location.setCoordinates(point);
-
-        if (request.getCreatedById() != null) {
-            userRepository.findById(request.getCreatedById())
-                    .ifPresent(location::setCreatedBy);
-        }
+        location.setGooglePlacesId(request.getGooglePlacesId());
+        location.setCreatedBy(creator);
 
         return locationRepository.save(location);
     }
 
-    // DELETE /locations/{id} - deletes a location by its UUID
+    // DELETE /locations/{id} — deletes a location by its UUID
+// Only the user who created the location can delete it (enforced via JWT)
     @DeleteMapping("/{id}")
-    public void deleteLocation(@PathVariable UUID id) {
+    public void deleteLocation(@PathVariable UUID id,
+                               @AuthenticationPrincipal Jwt jwt) {
+        Location location = locationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Location not found"));
+
+        User requester = userRepository.findByAzureOid(jwt.getSubject())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Authenticated user not found — call /auth/me first"));
+
+        if (!location.getCreatedBy().getId().equals(requester.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You can only delete your own locations");
+        }
+
         locationRepository.deleteById(id);
     }
 
-    // GET /locations/{id}/reviews - returns all reviews for a location
+    // GET /locations/{id}/reviews — returns all reviews for a location
     @GetMapping("/{id}/reviews")
     public List<Review> getReviewsByLocation(@PathVariable UUID id) {
         return reviewRepository.findByLocationId(id);
@@ -137,8 +177,6 @@ public class LocationController {
 
     // GET /locations/nearby/ranked?lat=53.34&lng=-6.26&km=2
     // Returns locations within the given radius, sorted by Bayesian average score (best first)
-    // Each result includes: id, name, category, address, latitude, longitude,
-    // reviewCount, averageRating, and bayesianScore
     @GetMapping("/nearby/ranked")
     public List<LocationSummary> getNearbyRanked(
             @RequestParam double lat,
@@ -150,8 +188,6 @@ public class LocationController {
 
     // GET /locations/search?q=temple
     // Searches for locations whose name or category contains the search term (case-insensitive)
-    // Returns the same shape as /nearby/ranked — includes review count, average rating, and lat/lng
-    // Results are ordered by Bayesian score so the best-reviewed matches appear first
     // Returns an empty list for blank queries rather than returning every location
     @GetMapping("/search")
     public List<LocationSummary> searchLocations(@RequestParam String q) {

@@ -2,18 +2,15 @@ package com.example.LocationReviewApp.dto;
 
 import java.util.UUID;
 
-// Represents the data received when sending a friend request
-// Callers send just the two user IDs; the controller looks up the User objects
+// Represents the data received when adding a friend.
+// Only the receiver's ID is needed — the requester is always derived from the JWT
+// in the controller, so callers cannot send a request on behalf of someone else.
+//
+// Note: requesterId was removed. It was dead code — the controller never read it,
+// and accepting it in the request body was misleading since it was always ignored.
 public class FriendRequest {
 
-    // The user sending the friend request
-    private UUID requesterId;
-
-    // The user receiving the friend request
     private UUID receiverId;
-
-    public UUID getRequesterId() { return requesterId; }
-    public void setRequesterId(UUID requesterId) { this.requesterId = requesterId; }
 
     public UUID getReceiverId() { return receiverId; }
     public void setReceiverId(UUID receiverId) { this.receiverId = receiverId; }
