@@ -19,6 +19,7 @@ export type MapLocation = {
   category: string;
   address: string;
   reviews: LocationReviewPreview[];
+  friendReviewCount?: number;
 };
 
 type Props = {
@@ -28,6 +29,8 @@ type Props = {
 };
 
 const LocationDetailCard = ({ location, onClose, onViewMore }: Props) => {
+  const friendReviewCount = location.friendReviewCount ?? 0;
+
   return (
     <View style={styles.detailCard}>
       <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -37,6 +40,14 @@ const LocationDetailCard = ({ location, onClose, onViewMore }: Props) => {
       <Text style={styles.title}>{location.title}</Text>
       <Text style={styles.category}>{location.category}</Text>
       <Text style={styles.address}>{location.address}</Text>
+
+      {friendReviewCount > 0 ? (
+        <Text style={styles.friendActivityText}>
+          {friendReviewCount === 1
+            ? "1 friend review for this place"
+            : `${friendReviewCount} friend reviews for this place`}
+        </Text>
+      ) : null}
 
       <Text style={styles.reviewSection}>Reviews</Text>
 
@@ -96,6 +107,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#444",
     marginBottom: 10,
+  },
+
+  friendActivityText: {
+    fontSize: 13,
+    color: "#a16207",
+    fontWeight: "600",
+    marginBottom: 2,
   },
 
   reviewSection: {

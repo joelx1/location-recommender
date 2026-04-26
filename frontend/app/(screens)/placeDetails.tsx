@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import React, { useEffect, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import Feather from "@expo/vector-icons/Feather";
@@ -17,7 +17,9 @@ type BackendReview = {
   id: string;
   rating: number;
   body: string | null;
+  photoUrl?: string | null;
   user?: {
+    id?: string;
     username?: string;
   };
 };
@@ -28,15 +30,29 @@ type PlaceDetailsData = {
   reviewCount: number;
   category: string;
   address: string;
+  friendReviewCount: number;
+  friendReviewerNames: string[];
   reviews: {
+    id: string;
     user: string;
     rating: string;
     body: string;
+    photoUrl?: string | null;
   }[];
 };
 
+type FeedReview = {
+  id: string;
+  user?: {
+    username?: string;
+  };
+  location?: {
+    id: string;
+  };
+};
+
 const PlaceDetails = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   console.log("placeDetails id:", id);
@@ -58,10 +74,16 @@ const PlaceDetails = () => {
         setError(null);
 
         const authHeaders = { Authorization: `Bearer ${token}` };
-        const [locationResponse, reviewsResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/locations/${id}`, { headers: authHeaders }),
-          fetch(`${API_BASE_URL}/locations/${id}/reviews`, { headers: authHeaders }),
-        ]);
+        const [locationResponse, reviewsResponse, feedResponse] =
+          await Promise.all([
+            fetch(`${API_BASE_URL}/locations/${id}`, { headers: authHeaders }),
+            fetch(`${API_BASE_URL}/locations/${id}/reviews`, {
+              headers: authHeaders,
+            }),
+            fetch(`${API_BASE_URL}/users/${user!.id}/feed`, {
+              headers: authHeaders,
+            }),
+          ]);
 
         if (!locationResponse.ok) {
           throw new Error(
@@ -75,8 +97,28 @@ const PlaceDetails = () => {
           );
         }
 
+        if (!feedResponse.ok) {
+          throw new Error(
+            `Feed request failed with status ${feedResponse.status}`,
+          );
+        }
+
         const locationData: BackendLocation = await locationResponse.json();
         const reviewsData: BackendReview[] = await reviewsResponse.json();
+        const feedData: FeedReview[] = await feedResponse.json();
+
+        const friendReviewsForPlace = feedData.filter(
+          (review) => review.location?.id === id,
+        );
+        const friendReviewCount = friendReviewsForPlace.length;
+
+        const friendReviewerNames = Array.from(
+          new Set(
+            friendReviewsForPlace
+              .map((review) => review.user?.username)
+              .filter((name): name is string => Boolean(name)),
+          ),
+        );
 
         const reviewCount = reviewsData.length;
         const averageRating =
@@ -91,10 +133,14 @@ const PlaceDetails = () => {
           reviewCount,
           category: locationData.category,
           address: locationData.address ?? "No address provided",
+          friendReviewCount,
+          friendReviewerNames,
           reviews: reviewsData.map((review) => ({
+            id: review.id,
             user: review.user?.username ?? "Anonymous",
             rating: `${review.rating}/5`,
             body: review.body ?? "",
+            photoUrl: review.photoUrl ?? null,
           })),
         });
       } catch (err) {
@@ -166,14 +212,17 @@ const PlaceDetails = () => {
           <Text style={styles.ratingText}>{location.rating}</Text>
           <Text style={styles.reviewCount}>{location.reviewCount} reviews</Text>
         </View>
-        <View style={styles.friendRow}>
-          <View style={styles.friendAvatars}>
-            <View style={styles.avatarCircle} />
-            <View style={[styles.avatarCircle, styles.avatarOverlap]} />
-            <View style={[styles.avatarCircle, styles.avatarOverlap]} />
+        {location.friendReviewerNames.length > 0 ? (
+          <View style={styles.friendBadge}>
+            <Text style={styles.friendText}>
+              Reviewed by{" "}
+              {location.friendReviewerNames.slice(0, 2).join(" and ")}
+              {location.friendReviewerNames.length > 2
+                ? ` +${location.friendReviewerNames.length - 2} more`
+                : ""}
+            </Text>
           </View>
-          <Text style={styles.friendText}>reviewed this place</Text>
-        </View>
+        ) : null}
 
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
@@ -189,11 +238,22 @@ const PlaceDetails = () => {
         <Text style={styles.reviewSection}>Reviews</Text>
         <View style={styles.reviewsCard}>
           {location.reviews.map((review) => (
-            <View key={review.user} style={styles.reviewItem}>
+            <View key={review.id} style={styles.reviewItem}>
               <Text style={styles.reviewUser}>
                 {review.user} · {review.rating}
               </Text>
-              <Text style={styles.reviewBody}>{review.body}</Text>
+
+              {review.body ? (
+                <Text style={styles.reviewBody}>{review.body}</Text>
+              ) : null}
+
+              {review.photoUrl ? (
+                <Image
+                  source={{ uri: review.photoUrl }}
+                  style={styles.reviewImage}
+                  resizeMode="cover"
+                />
+              ) : null}
             </View>
           ))}
         </View>
@@ -211,6 +271,7 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     paddingHorizontal: 20,
   },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -268,8 +329,9 @@ const styles = StyleSheet.create({
   },
 
   friendText: {
-    fontSize: 14,
-    color: "#8b8b8b",
+    fontSize: 12,
+    color: "#a16207",
+    fontWeight: "600",
   },
 
   infoCard: {
@@ -295,6 +357,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111",
     fontWeight: "500",
+    maxWidth: "80%",
+    textAlign: "right",
   },
 
   reviewSection: {
@@ -353,5 +417,20 @@ const styles = StyleSheet.create({
 
   avatarOverlap: {
     marginLeft: -8,
+  },
+
+  friendBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#fef3c7",
+  },
+  reviewImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: 16,
+    marginTop: 10,
+    backgroundColor: "#ddd",
   },
 });

@@ -4,18 +4,28 @@
 # application.properties is gitignored — never commit real credentials.
 # ============================================================
 
-# ---- LOCAL (PostgreSQL on your machine) ----
+# ---- Database ----
+# Option A: Local PostgreSQL
 # spring.datasource.url=jdbc:postgresql://localhost:5432/locationdb
 # spring.datasource.username=postgres
 # spring.datasource.password=YOUR_LOCAL_PASSWORD
 
-# ---- AZURE (PostgreSQL Flexible Server) ----
-# spring.datasource.url=jdbc:postgresql://YOUR_SERVER_NAME.postgres.database.azure.com:5432/locationdb?sslmode=require
-# spring.datasource.username=YOUR_ADMIN_USERNAME
-# spring.datasource.password=YOUR_AZURE_PASSWORD
+# Option B: Azure PostgreSQL Flexible Server (shared dev DB)
+spring.datasource.url=jdbc:postgresql://locationdb.postgres.database.azure.com:5432/locationdb?sslmode=require
+spring.datasource.username=LocationAdmin
+spring.datasource.password=ASK_JACK_FOR_PASSWORD
 
-# ---- Common settings (don't change these) ----
-spring.jpa.hibernate.ddl-auto=update
+# ---- JPA / Hibernate ----
+spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.show-sql=true
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 server.error.include-message=always
+
+# ---- Azure Blob Storage ----
+azure.storage.connection-string=ASK_JACK_FOR_CONNECTION_STRING
+azure.storage.sas-expiry-days=30
+azure.storage.container-name=profilepics
+
+# ---- Azure Entra External ID (needed once auth backend is merged) ----
+spring.security.oauth2.resourceserver.jwt.issuer-uri=https://4b3cac24-21c9-4816-9325-21a3df6a31c0.ciamlogin.com/4b3cac24-21c9-4816-9325-21a3df6a31c0/v2.0
+azure.entra.client-id=7a30bda2-0b4d-4b28-803f-6df60ced1f48
