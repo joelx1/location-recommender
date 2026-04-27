@@ -1,13 +1,7 @@
 import React from "react";
-import {
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  StyleSheet,
-} from "react-native";
-import Feather from "@expo/vector-icons/Feather";
+import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
 import type { PlaceResult } from "@/types/place";
+import SearchBar from "@/components/search/SearchBar";
 
 // Reusable place search UI for screens that show a search box and selectable place results.
 
@@ -34,23 +28,13 @@ const PlaceSearchList = ({
 }: Props) => {
   return (
     <View>
-      <View style={styles.searchBar}>
-        <Feather name="search" size={18} color="#666" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search location"
-          placeholderTextColor="#888"
-          value={value}
-          onChangeText={onChangeText}
-          returnKeyType="search"
-        />
-
-        {value.trim().length > 0 && (
-          <TouchableOpacity onPress={onClear} style={styles.cancelButton}>
-            <Feather name="x" size={18} color="#666" />
-          </TouchableOpacity>
-        )}
-      </View>
+      <SearchBar
+        value={value}
+        onChangeText={onChangeText}
+        placeholder="Search location"
+        onClear={onClear}
+        style={styles.searchBar}
+      />
 
       <View style={styles.suggestionsList}>
         {loading ? (
@@ -82,22 +66,7 @@ export default PlaceSearchList;
 
 const styles = StyleSheet.create({
   searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    backgroundColor: "#f2f2f2",
-    paddingHorizontal: 14,
-    height: 52,
     marginBottom: 16,
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: "#111",
-  },
-  cancelButton: {
-    padding: 4,
   },
   suggestionsList: {
     gap: 10,
