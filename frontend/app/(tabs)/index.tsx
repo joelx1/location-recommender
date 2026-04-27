@@ -303,25 +303,43 @@ const Index = () => {
 
         // Temporary workaround: the deployed Azure backend currently returns 400 for /users/search?q=, so Home fetches all users and filters by username locally.
 
-        fetch(`${API_BASE_URL}/users`, { headers: authHeaders }).then(
-          async (response) => {
-            if (!response.ok) {
-              throw new Error(`User list failed: ${response.status}`);
-            }
+        (async () => {
+          const searchResponse = await fetch(
+            `${API_BASE_URL}/users/search?q=${encodeURIComponent(keyword)}`,
+            { headers: authHeaders },
+          );
 
-            const users = (await response.json()) as UserSummary[];
+          const searchBody = await searchResponse.text();
 
-            return users
-              .filter(
-                (resultUser) =>
-                  resultUser.id !== user?.id &&
-                  resultUser.username
-                    .toLowerCase()
-                    .includes(keyword.toLowerCase()),
-              )
-              .slice(0, 20);
-          },
-        ),
+          console.log("GET /users/search status:", searchResponse.status);
+          console.log("GET /users/search body:", searchBody);
+
+          if (searchResponse.ok) {
+            return JSON.parse(searchBody) as UserSummary[];
+          }
+
+          console.log("Falling back to GET /users local filtering");
+
+          const fallbackResponse = await fetch(`${API_BASE_URL}/users`, {
+            headers: authHeaders,
+          });
+
+          if (!fallbackResponse.ok) {
+            throw new Error(`User list failed: ${fallbackResponse.status}`);
+          }
+
+          const users = (await fallbackResponse.json()) as UserSummary[];
+
+          return users
+            .filter(
+              (resultUser) =>
+                resultUser.id !== user?.id &&
+                resultUser.username
+                  .toLowerCase()
+                  .includes(keyword.toLowerCase()),
+            )
+            .slice(0, 20);
+        })(),
       ]);
 
       if (placesResult.status === "fulfilled") {
