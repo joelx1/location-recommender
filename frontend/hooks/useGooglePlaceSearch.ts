@@ -50,10 +50,11 @@ export const useGooglePlaceSearch = (
       }
     };
 
-    runSearch();
+    const timeout = setTimeout(runSearch, 500);
 
     return () => {
       active = false;
+      clearTimeout(timeout);
     };
   }, [searchText, enabled, minLength]);
 

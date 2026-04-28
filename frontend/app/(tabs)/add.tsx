@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { useAuth } from "@/context/AuthContext";
 import type { PlaceResult } from "@/types/place";
-import { filterPlacesByKeyword } from "@/services/placeMapper";
+import {
+  filterPlacesByKeyword,
+  isSamePlaceByNameAndAddress,
+} from "@/services/placeMapper";
 import PlaceSearchList from "@/components/places/PlaceSearchList";
 import { router } from "expo-router";
 import { useGooglePlaceSearch } from "@/hooks/useGooglePlaceSearch";
@@ -27,10 +30,8 @@ const Add = () => {
     ...filteredDbResults,
     ...googleResults.filter(
       (googlePlace) =>
-        !filteredDbResults.some(
-          (dbPlace) =>
-            dbPlace.googlePlaceId &&
-            dbPlace.googlePlaceId === googlePlace.googlePlaceId,
+        !filteredDbResults.some((dbPlace) =>
+          isSamePlaceByNameAndAddress(dbPlace, googlePlace),
         ),
     ),
   ];

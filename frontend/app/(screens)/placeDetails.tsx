@@ -5,12 +5,18 @@ import Feather from "@expo/vector-icons/Feather";
 import { router, useLocalSearchParams } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import PlaceCategoryImage from "@/components/places/PlaceCategoryImage";
 
-type BackendLocation = {
+type BackendLocationSummary = {
   id: string;
   name: string;
   category: string;
   address: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  reviewCount?: number | null;
+  averageRating?: number | null;
+  bayesianScore?: number | null;
 };
 
 type BackendReview = {
@@ -18,6 +24,7 @@ type BackendReview = {
   rating: number;
   body: string | null;
   photoUrl?: string | null;
+  createdAt?: string;
   user?: {
     id?: string;
     username?: string;
@@ -43,11 +50,13 @@ type PlaceDetailsData = {
 
 type FeedReview = {
   id: string;
+  username?: string;
+  locationId?: string;
   user?: {
     username?: string;
   };
   location?: {
-    id: string;
+    id?: string;
   };
 };
 
@@ -55,16 +64,14 @@ const PlaceDetails = () => {
   const { token, user } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  console.log("placeDetails id:", id);
-
   const [location, setLocation] = useState<PlaceDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPlaceDetails = async () => {
-      if (!id) {
-        setError("Missing location id");
+      if (!id || !token || !user?.id) {
+        setError("Missing location or user data");
         setLoading(false);
         return;
       }
@@ -76,11 +83,13 @@ const PlaceDetails = () => {
         const authHeaders = { Authorization: `Bearer ${token}` };
         const [locationResponse, reviewsResponse, feedResponse] =
           await Promise.all([
-            fetch(`${API_BASE_URL}/locations/${id}`, { headers: authHeaders }),
+            fetch(`${API_BASE_URL}/locations/${id}/summary`, {
+              headers: authHeaders,
+            }),
             fetch(`${API_BASE_URL}/locations/${id}/reviews`, {
               headers: authHeaders,
             }),
-            fetch(`${API_BASE_URL}/users/${user!.id}/feed`, {
+            fetch(`${API_BASE_URL}/users/${user.id}/feed`, {
               headers: authHeaders,
             }),
           ]);
@@ -103,29 +112,32 @@ const PlaceDetails = () => {
           );
         }
 
-        const locationData: BackendLocation = await locationResponse.json();
+        const locationData: BackendLocationSummary =
+          await locationResponse.json();
         const reviewsData: BackendReview[] = await reviewsResponse.json();
         const feedData: FeedReview[] = await feedResponse.json();
 
         const friendReviewsForPlace = feedData.filter(
-          (review) => review.location?.id === id,
+          (review) => (review.locationId || review.location?.id) === id,
         );
         const friendReviewCount = friendReviewsForPlace.length;
 
         const friendReviewerNames = Array.from(
           new Set(
             friendReviewsForPlace
-              .map((review) => review.user?.username)
+              .map((review) => review.username || review.user?.username)
               .filter((name): name is string => Boolean(name)),
           ),
         );
 
-        const reviewCount = reviewsData.length;
-        const averageRating =
-          reviewCount > 0
-            ? reviewsData.reduce((sum, review) => sum + review.rating, 0) /
-              reviewCount
-            : 0;
+        const reviewCount = locationData.reviewCount ?? reviewsData.length;
+        const averageRating = locationData.averageRating ?? 0;
+        const sortedReviews = [...reviewsData].sort((a, b) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+          return timeB - timeA;
+        });
 
         setLocation({
           title: locationData.name,
@@ -135,7 +147,7 @@ const PlaceDetails = () => {
           address: locationData.address ?? "No address provided",
           friendReviewCount,
           friendReviewerNames,
-          reviews: reviewsData.map((review) => ({
+          reviews: sortedReviews.map((review) => ({
             id: review.id,
             user: review.user?.username ?? "Anonymous",
             rating: `${review.rating}/5`,
@@ -153,7 +165,7 @@ const PlaceDetails = () => {
     };
 
     fetchPlaceDetails();
-  }, [id]);
+  }, [id, token, user?.id]);
 
   if (loading) {
     return (
@@ -201,9 +213,10 @@ const PlaceDetails = () => {
         </View>
       </View>
 
-      <View style={styles.imagePlaceholder}>
-        <Feather name="image" size={32} color="#444" />
-      </View>
+      <PlaceCategoryImage
+        category={location.category}
+        style={styles.heroImage}
+      />
 
       <View style={styles.content}>
         <Text style={styles.title}>{location.title}</Text>
@@ -237,25 +250,29 @@ const PlaceDetails = () => {
 
         <Text style={styles.reviewSection}>Reviews</Text>
         <View style={styles.reviewsCard}>
-          {location.reviews.map((review) => (
-            <View key={review.id} style={styles.reviewItem}>
-              <Text style={styles.reviewUser}>
-                {review.user} · {review.rating}
-              </Text>
+          {location.reviews.length > 0 ? (
+            location.reviews.map((review) => (
+              <View key={review.id} style={styles.reviewItem}>
+                <Text style={styles.reviewUser}>
+                  {review.user} · {review.rating}
+                </Text>
 
-              {review.body ? (
-                <Text style={styles.reviewBody}>{review.body}</Text>
-              ) : null}
+                {review.body ? (
+                  <Text style={styles.reviewBody}>{review.body}</Text>
+                ) : null}
 
-              {review.photoUrl ? (
-                <Image
-                  source={{ uri: review.photoUrl }}
-                  style={styles.reviewImage}
-                  resizeMode="cover"
-                />
-              ) : null}
-            </View>
-          ))}
+                {review.photoUrl ? (
+                  <Image
+                    source={{ uri: review.photoUrl }}
+                    style={styles.reviewImage}
+                    resizeMode="cover"
+                  />
+                ) : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyReviewText}>No reviews yet.</Text>
+          )}
         </View>
       </View>
     </ScreenWrapper>
@@ -270,6 +287,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 24,
     paddingHorizontal: 20,
+    backgroundColor: "#FFFFFF",
   },
 
   header: {
@@ -298,17 +316,17 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: 18,
-    fontWeight: "500",
+    fontWeight: "800",
     color: "#111",
   },
 
-  imagePlaceholder: {
+  heroImage: {
+    width: "100%",
     height: 220,
     borderRadius: 24,
-    backgroundColor: "#ececec",
     marginBottom: 24,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#ececec",
+    overflow: "hidden",
   },
 
   ratingRow: {
@@ -336,7 +354,7 @@ const styles = StyleSheet.create({
 
   infoCard: {
     borderRadius: 24,
-    backgroundColor: "#ececec",
+    backgroundColor: "#F3F4F6",
     marginTop: 4,
     padding: 20,
     gap: 16,
@@ -370,7 +388,7 @@ const styles = StyleSheet.create({
 
   reviewsCard: {
     borderRadius: 24,
-    backgroundColor: "#ececec",
+    backgroundColor: "#F3F4F6",
     paddingTop: 10,
     paddingHorizontal: 12,
     paddingBottom: 12,
@@ -395,28 +413,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  friendRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  friendAvatars: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  avatarCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#d8d8d8",
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-
-  avatarOverlap: {
-    marginLeft: -8,
+  emptyReviewText: {
+    padding: 10,
+    fontSize: 14,
+    color: "#777",
   },
 
   friendBadge: {
