@@ -15,19 +15,26 @@ import { useAuth } from "@/context/AuthContext";
 
 type FeedReview = {
   id: string;
+  userId?: string;
+  username?: string;
+  profilePic?: string | null;
+  locationId?: string;
+  locationName?: string;
+  locationCategory?: string | null;
+  locationAddress?: string | null;
   rating: number;
   body: string | null;
   photoUrl?: string | null;
   createdAt?: string;
   user?: {
-    id: string;
+    id?: string;
     username?: string;
     profilePic?: string | null;
   };
   location?: {
-    id: string;
+    id?: string;
     name?: string;
-    category?: string;
+    category?: string | null;
     address?: string | null;
   };
 };
@@ -52,24 +59,15 @@ const Social = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `${API_BASE_URL}/users/${user!.id}/feed`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await fetch(`${API_BASE_URL}/users/${user!.id}/feed`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!response.ok) {
         throw new Error(`Feed request failed with status ${response.status}`);
       }
 
       const data: FeedReview[] = await response.json();
-      console.log("feed data:", data);
-      console.log(
-        "feed photo urls:",
-        data.map((item) => ({
-          id: item.id,
-          photoUrl: item.photoUrl,
-        })),
-      );
 
       setFeed(data);
     } catch (err) {
@@ -110,8 +108,13 @@ const Social = () => {
           contentContainerStyle={styles.container}
         >
           {feed.map((review) => {
-            const username = review.user?.username ?? "Anonymous";
-            const placeName = review.location?.name ?? "Unknown place";
+            const username =
+              review.username || review.user?.username || "Anonymous";
+            const placeName =
+              review.locationName || review.location?.name || "Unknown place";
+            const profilePic =
+              review.profilePic || review.user?.profilePic || null;
+            const locationId = review.locationId || review.location?.id;
             const body = review.body?.trim();
             const hasImage = Boolean(review.photoUrl);
 
@@ -119,9 +122,9 @@ const Social = () => {
               <View key={review.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.userRow}>
-                    {review.user?.profilePic ? (
+                    {profilePic ? (
                       <Image
-                        source={{ uri: review.user.profilePic }}
+                        source={{ uri: profilePic }}
                         style={styles.avatar}
                       />
                     ) : (
@@ -136,10 +139,10 @@ const Social = () => {
 
                         <TouchableOpacity
                           onPress={() => {
-                            if (review.location?.id) {
+                            if (locationId) {
                               router.push({
                                 pathname: "/placeDetails",
-                                params: { id: review.location.id },
+                                params: { id: locationId },
                               });
                             }
                           }}

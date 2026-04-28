@@ -82,7 +82,7 @@ const AddReview = () => {
       category: place.category,
       latitude: place.latitude,
       longitude: place.longitude,
-      googlePlaceId: place.googlePlaceId,
+      googlePlacesId: place.googlePlaceId,
     };
 
     const response = await fetch(`${API_BASE_URL}/locations`, {

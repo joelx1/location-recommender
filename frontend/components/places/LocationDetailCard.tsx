@@ -26,13 +26,19 @@ type Props = {
   location: MapLocation;
   onClose: () => void;
   onViewMore: () => void;
+  bottomOffset?: number;
 };
 
-const LocationDetailCard = ({ location, onClose, onViewMore }: Props) => {
+const LocationDetailCard = ({
+  location,
+  onClose,
+  onViewMore,
+  bottomOffset = 20,
+}: Props) => {
   const friendReviewCount = location.friendReviewCount ?? 0;
 
   return (
-    <View style={styles.detailCard}>
+    <View style={[styles.detailCard, { bottom: bottomOffset }]}>
       <TouchableOpacity style={styles.closeButton} onPress={onClose}>
         <Feather name="x" size={20} color="#666" />
       </TouchableOpacity>
@@ -76,7 +82,6 @@ export default LocationDetailCard;
 const styles = StyleSheet.create({
   detailCard: {
     position: "absolute",
-    bottom: 20,
     left: 16,
     right: 16,
     backgroundColor: "white",
@@ -92,7 +97,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontWeight: "bold",
+    fontWeight: "800",
     fontSize: 18,
     marginBottom: 4,
   },
@@ -118,7 +123,7 @@ const styles = StyleSheet.create({
 
   reviewSection: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "800",
     marginTop: 8,
     marginBottom: 8,
   },
