@@ -7,6 +7,7 @@ import ProfileTab from "@/components/profile/ProfileTab";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
 
 type BackendUser = {
   id: string;
@@ -183,7 +184,9 @@ export default function FriendProfile() {
         <Image source={{ uri: item.photoUrl }} style={styles.cardImage} />
       ) : null}
 
-      <View style={styles.cardContent}>
+      <View
+        style={[styles.cardContent, !item.photoUrl && styles.textOnlyContent]}
+      >
         <Text style={styles.cardTitle} numberOfLines={1}>
           {item.locationName}
         </Text>
@@ -215,8 +218,6 @@ export default function FriendProfile() {
           >
             <Feather name="arrow-left" size={22} color="#111" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <View style={styles.headerSpacer} />
         </View>
 
         <View style={styles.stateContainer}>
@@ -236,8 +237,6 @@ export default function FriendProfile() {
           >
             <Feather name="arrow-left" size={22} color="#111" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <View style={styles.headerSpacer} />
         </View>
 
         <View style={styles.stateContainer}>
@@ -260,10 +259,6 @@ export default function FriendProfile() {
         >
           <Feather name="arrow-left" size={22} color="#111" />
         </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>Profile</Text>
-
-        <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.profileHeader}>
@@ -281,7 +276,9 @@ export default function FriendProfile() {
 
         <View style={styles.profileInfo}>
           <Text style={styles.username}>{profileData.username}</Text>
-          <Text style={styles.bio}>{profileData.bio ?? "No bio yet"}</Text>
+          {profileData.bio?.trim() ? (
+            <Text style={styles.bio}>{profileData.bio}</Text>
+          ) : null}
           <Text style={styles.friendCount}>Friends {friendsCount}</Text>
         </View>
       </View>
@@ -348,7 +345,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingTop: 12,
-    paddingBottom: 18,
+    paddingBottom: 10,
     backgroundColor: "#fff",
   },
 
@@ -357,19 +354,6 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  headerTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111",
-    textAlign: "center",
-  },
-
-  headerSpacer: {
-    width: 32,
-    height: 32,
   },
 
   profileHeader: {
@@ -469,16 +453,16 @@ const styles = StyleSheet.create({
   },
 
   cardImage: {
-    width: "90%",
-    height: 96,
-    borderRadius: 12,
-    marginTop: 6,
-    marginBottom: 6,
+    width: "92%",
+    height: 108,
+    borderRadius: theme.radius.md,
+    marginTop: 8,
+    marginBottom: 4,
     alignSelf: "center",
   },
 
   cardContent: {
-    padding: 12,
+    padding: 10,
   },
 
   cardTitle: {
@@ -498,12 +482,12 @@ const styles = StyleSheet.create({
   cardRating: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#444",
+    color: theme.colors.textMuted,
   },
 
   cardCategoryInline: {
     fontSize: 12,
-    color: "#8a8a8a",
+    color: theme.colors.textSubtle,
     marginLeft: 4,
     textTransform: "capitalize",
   },
@@ -511,14 +495,14 @@ const styles = StyleSheet.create({
   cardBody: {
     fontSize: 13,
     lineHeight: 18,
-    color: "#333",
+    color: theme.colors.textMuted,
     marginBottom: 8,
   },
 
   cardDate: {
     textAlign: "right",
     fontSize: 11,
-    color: "#777",
+    color: theme.colors.textSubtle,
   },
 
   emptyPosts: {
@@ -543,5 +527,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#c62828",
     textAlign: "center",
+  },
+
+  textOnlyContent: {
+    minHeight: 104,
   },
 });
