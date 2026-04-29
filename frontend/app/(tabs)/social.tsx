@@ -13,6 +13,7 @@ import { router, useFocusEffect } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
 
 type FeedReview = {
   id: string;
@@ -155,7 +156,11 @@ const Social = () => {
                   </View>
 
                   <TouchableOpacity>
-                    <Feather name="bookmark" size={22} color="#222" />
+                    <Feather
+                      name="bookmark"
+                      size={22}
+                      color={theme.colors.textMuted}
+                    />
                   </TouchableOpacity>
                 </View>
 
@@ -215,6 +220,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
     paddingBottom: 32,
+    gap: 14,
   },
 
   stateContainer: {
@@ -236,8 +242,7 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    padding: 14,
-    marginBottom: 14,
+    padding: 16,
   },
 
   cardHeader: {
@@ -271,7 +276,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#d9d9d9",
+    backgroundColor: theme.colors.surfaceMuted,
   },
 
   username: {
@@ -282,7 +287,7 @@ const styles = StyleSheet.create({
 
   actionText: {
     fontSize: 12,
-    color: "#7a7a7a",
+    color: theme.colors.textMuted,
   },
 
   placeLink: {
@@ -305,27 +310,27 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#444",
+    color: theme.colors.textMuted,
     marginLeft: 4,
   },
 
   metaText: {
     fontSize: 13,
-    color: "#666",
+    color: theme.colors.textMuted,
     marginLeft: 8,
   },
 
   reviewText: {
     fontSize: 14,
     lineHeight: 20,
-    color: "#333",
+    color: theme.colors.text,
     marginBottom: 12,
   },
 
   feedImage: {
     width: "100%",
     height: 220,
-    borderRadius: 18,
-    backgroundColor: "#ececec",
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.surfaceMuted,
   },
 });

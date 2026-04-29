@@ -15,6 +15,7 @@ import { API_BASE_URL } from "@/services/api";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
 
 type BackendUser = {
   id: string;
@@ -388,17 +389,17 @@ const styles = StyleSheet.create({
 
   gridPlaceHolder: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
 
   leftColumn: {
     flex: 1,
-    gap: 8,
+    gap: 10,
   },
 
   rightColumn: {
     flex: 1,
-    gap: 8,
+    gap: 10,
   },
 
   savedPlaceHolder: {
@@ -428,16 +429,16 @@ const styles = StyleSheet.create({
   },
 
   cardImage: {
-    width: "90%",
-    height: 96,
-    borderRadius: 12,
-    marginTop: 6,
-    marginBottom: 6,
+    width: "92%",
+    height: 108,
+    borderRadius: theme.radius.md,
+    marginTop: 8,
+    marginBottom: 2,
     alignSelf: "center",
   },
 
   cardContent: {
-    padding: 12,
+    padding: 10,
   },
 
   cardTitle: {
@@ -445,7 +446,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     color: "#111",
-    // marginBottom: 6,
   },
 
   cardMetaRow: {
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
 
   cardCategoryInline: {
     fontSize: 12,
-    color: "#8a8a8a",
+    color: theme.colors.textSubtle,
     marginLeft: 4,
     textTransform: "capitalize",
   },
@@ -469,20 +469,20 @@ const styles = StyleSheet.create({
   cardRating: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#444",
+    color: theme.colors.textMuted,
   },
 
   cardBody: {
     fontSize: 13,
     lineHeight: 18,
-    color: "#333",
+    color: theme.colors.textMuted,
     marginBottom: 8,
   },
 
   cardDate: {
     textAlign: "right",
     fontSize: 11,
-    color: "#777",
+    color: theme.colors.textSubtle,
   },
 
   friendsListButton: {
@@ -513,9 +513,10 @@ const styles = StyleSheet.create({
 
   deleteButton: {
     padding: 2,
+    opacity: 0.65,
   },
 
   textOnlyContent: {
-    minHeight: 120,
+    minHeight: 110,
   },
 });
