@@ -6,8 +6,7 @@ import ScreenWrapper from "@/components/ScreenWrapper";
 import ProfileTab from "@/components/profile/ProfileTab";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
-import Card from "@/components/ui/Card";
-import { theme } from "@/theme";
+import ProfilePostCard from "@/components/profile/ProfilePostCard";
 
 type BackendUser = {
   id: string;
@@ -168,9 +167,9 @@ export default function FriendProfile() {
   );
 
   const renderPostCard = (item: PostItem) => (
-    <Card
+    <ProfilePostCard
       key={item.id}
-      style={styles.gridCard}
+      post={item}
       onPress={() => {
         if (item.locationId) {
           router.push({
@@ -179,33 +178,7 @@ export default function FriendProfile() {
           });
         }
       }}
-    >
-      {item.photoUrl ? (
-        <Image source={{ uri: item.photoUrl }} style={styles.cardImage} />
-      ) : null}
-
-      <View
-        style={[styles.cardContent, !item.photoUrl && styles.textOnlyContent]}
-      >
-        <Text style={styles.cardTitle} numberOfLines={1}>
-          {item.locationName}
-        </Text>
-
-        <View style={styles.cardRatingRow}>
-          <Feather name="star" size={12} color="#f59e0b" />
-          <Text style={styles.cardRating}>{item.rating}</Text>
-          {item.category ? (
-            <Text style={styles.cardCategoryInline}>{item.category}</Text>
-          ) : null}
-        </View>
-
-        <Text style={styles.cardBody} numberOfLines={2}>
-          {item.body || "No written review."}
-        </Text>
-
-        <Text style={styles.cardDate}>{item.createdAt}</Text>
-      </View>
-    </Card>
+    />
   );
 
   if (loading) {
@@ -448,63 +421,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  gridCard: {
-    overflow: "hidden",
-  },
-
-  cardImage: {
-    width: "92%",
-    height: 108,
-    borderRadius: theme.radius.md,
-    marginTop: 8,
-    marginBottom: 4,
-    alignSelf: "center",
-  },
-
-  cardContent: {
-    padding: 10,
-  },
-
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111",
-    marginBottom: 6,
-  },
-
-  cardRatingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 6,
-  },
-
-  cardRating: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textMuted,
-  },
-
-  cardCategoryInline: {
-    fontSize: 12,
-    color: theme.colors.textSubtle,
-    marginLeft: 4,
-    textTransform: "capitalize",
-  },
-
-  cardBody: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: theme.colors.textMuted,
-    marginBottom: 8,
-  },
-
-  cardDate: {
-    textAlign: "right",
-    fontSize: 11,
-    color: theme.colors.textSubtle,
-  },
-
   emptyPosts: {
     paddingVertical: 40,
     alignItems: "center",
@@ -527,9 +443,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#c62828",
     textAlign: "center",
-  },
-
-  textOnlyContent: {
-    minHeight: 104,
   },
 });
