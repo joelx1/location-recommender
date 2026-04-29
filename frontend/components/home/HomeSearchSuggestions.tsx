@@ -1,6 +1,7 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import type { PlaceResult } from "@/types/place";
+import Card from "@/components/ui/Card";
 
 export type HomeSearchPlace = {
   type: "place";
@@ -42,7 +43,7 @@ const HomeSearchSuggestions = ({
   if (!visible) return null;
 
   return (
-    <View style={styles.list}>
+    <Card style={styles.list}>
       {users.length > 0 && (
         <>
           <Text style={styles.sectionLabel}>People</Text>
@@ -122,7 +123,7 @@ const HomeSearchSuggestions = ({
           ))}
         </>
       )}
-    </View>
+    </Card>
   );
 };
 
@@ -132,14 +133,7 @@ const styles = StyleSheet.create({
     top: 58,
     left: 0,
     right: 0,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
     paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
   },
 
   sectionLabel: {

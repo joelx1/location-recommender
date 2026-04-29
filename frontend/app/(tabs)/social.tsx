@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import Feather from "@expo/vector-icons/Feather";
 import { router, useFocusEffect } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import Card from "@/components/ui/Card";
 
 type FeedReview = {
   id: string;
@@ -119,7 +120,7 @@ const Social = () => {
             const hasImage = Boolean(review.photoUrl);
 
             return (
-              <View key={review.id} style={styles.card}>
+              <Card key={review.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.userRow}>
                     {profilePic ? (
@@ -180,7 +181,7 @@ const Social = () => {
                     resizeMode="cover"
                   />
                 ) : null}
-              </View>
+              </Card>
             );
           })}
         </ScrollView>
@@ -235,8 +236,6 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: "#f7f7f7",
-    borderRadius: 20,
     padding: 14,
     marginBottom: 14,
   },

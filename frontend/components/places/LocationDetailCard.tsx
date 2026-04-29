@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
+import Card from "@/components/ui/Card";
 
 // Reusable bottom card for showing a selected map location and its review preview.
 
@@ -38,7 +39,7 @@ const LocationDetailCard = ({
   const friendReviewCount = location.friendReviewCount ?? 0;
 
   return (
-    <View style={[styles.detailCard, { bottom: bottomOffset }]}>
+    <Card style={[styles.detailCard, { bottom: bottomOffset }]}>
       <TouchableOpacity style={styles.closeButton} onPress={onClose}>
         <Feather name="x" size={20} color="#666" />
       </TouchableOpacity>
@@ -73,7 +74,7 @@ const LocationDetailCard = ({
       <TouchableOpacity style={styles.viewMoreButton} onPress={onViewMore}>
         <Text style={styles.viewMoreText}>View more</Text>
       </TouchableOpacity>
-    </View>
+    </Card>
   );
 };
 
@@ -84,8 +85,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    backgroundColor: "white",
-    borderRadius: 16,
     padding: 16,
   },
 

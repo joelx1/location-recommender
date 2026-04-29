@@ -14,6 +14,7 @@ import { router, useFocusEffect } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import Card from "@/components/ui/Card";
 
 type BackendUser = {
   id: string;
@@ -224,7 +225,7 @@ const Profile = () => {
         <View style={styles.gridPlaceHolder}>
           <View style={styles.leftColumn}>
             {leftColumnData.map((item) => (
-              <TouchableOpacity
+              <Card
                 key={item.id}
                 style={styles.gridCard}
                 onPress={() => {
@@ -290,13 +291,13 @@ const Profile = () => {
                   </Text>
                   <Text style={styles.cardDate}>{item.createdAt}</Text>
                 </View>
-              </TouchableOpacity>
+              </Card>
             ))}
           </View>
 
           <View style={styles.rightColumn}>
             {rightColumnData.map((item) => (
-              <TouchableOpacity
+              <Card
                 key={item.id}
                 style={styles.gridCard}
                 onPress={() => {
@@ -357,7 +358,7 @@ const Profile = () => {
                   </Text>
                   <Text style={styles.cardDate}>{item.createdAt}</Text>
                 </View>
-              </TouchableOpacity>
+              </Card>
             ))}
           </View>
         </View>
@@ -411,8 +412,6 @@ const styles = StyleSheet.create({
   },
 
   gridCard: {
-    borderRadius: 12,
-    backgroundColor: "#f7f7f7",
     overflow: "hidden",
   },
 

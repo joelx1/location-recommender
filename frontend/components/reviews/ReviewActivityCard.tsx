@@ -1,6 +1,7 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import PlaceCategoryImage from "@/components/places/PlaceCategoryImage";
+import Card from "@/components/ui/Card";
 
 export type ReviewActivityItem = {
   id: string;
@@ -63,12 +64,7 @@ const ReviewActivityCard = ({ post, onPress }: Props) => {
   const category = getPostLocationCategory(post);
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.85}
-      disabled={!onPress}
-      onPress={onPress}
-    >
+    <Card style={styles.card} onPress={onPress}>
       <View style={styles.imageWrapper}>
         {post.photoUrl ? (
           <Image
@@ -118,7 +114,7 @@ const ReviewActivityCard = ({ post, onPress }: Props) => {
           </Text>
         ) : null}
       </View>
-    </TouchableOpacity>
+    </Card>
   );
 };
 
@@ -128,10 +124,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
     padding: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#EEEEEE",
-    backgroundColor: "#FFFFFF",
   },
 
   imageWrapper: {

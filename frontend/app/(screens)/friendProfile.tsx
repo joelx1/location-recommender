@@ -6,6 +6,7 @@ import ScreenWrapper from "@/components/ScreenWrapper";
 import ProfileTab from "@/components/profile/ProfileTab";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import Card from "@/components/ui/Card";
 
 type BackendUser = {
   id: string;
@@ -166,7 +167,7 @@ export default function FriendProfile() {
   );
 
   const renderPostCard = (item: PostItem) => (
-    <TouchableOpacity
+    <Card
       key={item.id}
       style={styles.gridCard}
       onPress={() => {
@@ -201,7 +202,7 @@ export default function FriendProfile() {
 
         <Text style={styles.cardDate}>{item.createdAt}</Text>
       </View>
-    </TouchableOpacity>
+    </Card>
   );
 
   if (loading) {
@@ -464,8 +465,6 @@ const styles = StyleSheet.create({
   },
 
   gridCard: {
-    borderRadius: 16,
-    backgroundColor: "#f7f7f7",
     overflow: "hidden",
   },
 
