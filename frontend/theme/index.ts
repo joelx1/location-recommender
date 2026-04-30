@@ -1,6 +1,6 @@
 export const theme = {
   colors: {
-    primary: "#0E6F68",
+    primary: "#0F766E",
     primarySoft: "#E7F3F1",
     accent: "#D97706",
     accentSoft: "#FFF3D6",
