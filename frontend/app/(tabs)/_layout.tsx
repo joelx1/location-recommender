@@ -3,6 +3,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "@/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type TabIconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -30,6 +31,9 @@ const TabIcon = ({ name, color, focused, isAdd }: TabIconProps) => {
 };
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.min(Math.max(insets.bottom, 6), 16);
+
   return (
     <Tabs
       screenOptions={{
@@ -38,7 +42,13 @@ export default function TabLayout() {
         tabBarInactiveTintColor: theme.colors.textSubtle,
         tabBarShowLabel: false,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: 58 + bottomPadding,
+            paddingBottom: bottomPadding,
+          },
+        ],
         tabBarItemStyle: styles.tabItem,
       }}
     >
@@ -100,7 +110,7 @@ export default function TabLayout() {
           title: "Profile",
           tabBarIcon: ({ color, focused }) => (
             <TabIcon
-              name={focused ? "person-circle" : "person-circle-outline"}
+              name={focused ? "person" : "person-outline"}
               color={color}
               focused={focused}
             />
@@ -113,19 +123,13 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 66,
     borderRadius: 0,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
     borderWidth: 0,
     backgroundColor: theme.colors.surface,
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: 6,
     shadowColor: theme.colors.shadow,
     shadowOpacity: 0.04,
     shadowRadius: 8,

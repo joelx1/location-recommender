@@ -312,7 +312,7 @@ const Search = () => {
       {selectedLocation && (
         <LocationDetailCard
           location={selectedLocation}
-          bottomOffset={88}
+          bottomOffset={16}
           onClose={handleClearSelection}
           onViewMore={() =>
             router.push({
