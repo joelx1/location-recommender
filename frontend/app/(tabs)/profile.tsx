@@ -119,7 +119,7 @@ const Profile = () => {
 
       setProfileData({
         username: userData.username ?? "User",
-        bio: userData.bio ?? "No bio yet",
+        bio: userData.bio?.trim() || "No bio yet",
         profilePic: userData.profilePic ?? "",
         followingCount: friendsData.length,
         followersCount: friendsData.length,
@@ -274,7 +274,10 @@ const styles = StyleSheet.create({
   tabRow: {
     flexDirection: "row",
     gap: 24,
-    marginBottom: 20,
+    paddingBottom: 12,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(17, 24, 39, 0.06)",
   },
 
   gridPlaceHolder: {
@@ -299,7 +302,7 @@ const styles = StyleSheet.create({
   savedCard: {
     height: 120,
     borderRadius: 12,
-    backgroundColor: "#f7f7f7",
+    backgroundColor: theme.colors.surfaceMuted,
   },
 
   stateText: {

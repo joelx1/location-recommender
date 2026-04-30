@@ -1,12 +1,14 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import Feather from "@expo/vector-icons/Feather";
 import ScreenWrapper from "@/components/ScreenWrapper";
+import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileTab from "@/components/profile/ProfileTab";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import ProfilePostCard from "@/components/profile/ProfilePostCard";
+import { theme } from "@/theme";
 
 type BackendUser = {
   id: string;
@@ -189,7 +191,7 @@ export default function FriendProfile() {
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Feather name="arrow-left" size={22} color="#111" />
+            <Feather name="arrow-left" size={22} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -208,7 +210,7 @@ export default function FriendProfile() {
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Feather name="arrow-left" size={22} color="#111" />
+            <Feather name="arrow-left" size={22} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -230,35 +232,25 @@ export default function FriendProfile() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Feather name="arrow-left" size={22} color="#111" />
+          <Feather name="arrow-left" size={22} color={theme.colors.text} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.profileHeader}>
-        {profileData.profilePic ? (
-          <Image
-            source={{ uri: profileData.profilePic }}
-            style={styles.avatar}
-          />
-        ) : (
-          <Image
-            source={require("@/assets/images/default-avatar.png")}
-            style={styles.avatar}
-          />
-        )}
-
-        <View style={styles.profileInfo}>
-          <Text style={styles.username}>{profileData.username}</Text>
-          {profileData.bio?.trim() ? (
-            <Text style={styles.bio}>{profileData.bio}</Text>
-          ) : null}
-          <Text style={styles.friendCount}>Friends {friendsCount}</Text>
-        </View>
+      <View style={styles.profileHeaderWrapper}>
+        <ProfileHeader
+          username={profileData.username}
+          bio={profileData.bio?.trim() || "No bio yet"}
+          followingCount={0}
+          followersCount={0}
+          friendCount={friendsCount}
+          showActions={false}
+          profilePic={profileData.profilePic ?? undefined}
+        />
       </View>
 
       {status === "ACCEPTED" ? (
         <View style={styles.friendButton}>
-          <Feather name="check" size={16} color="#111" />
+          <Feather name="check" size={16} color={theme.colors.text} />
           <Text style={styles.friendButtonText}>Friends</Text>
         </View>
       ) : (
@@ -267,7 +259,7 @@ export default function FriendProfile() {
           onPress={addFriend}
           disabled={adding}
         >
-          <Feather name="user-plus" size={16} color="#fff" />
+          <Feather name="user-plus" size={16} color={theme.colors.surface} />
           <Text style={styles.addButtonText}>
             {adding ? "Adding..." : "Add Friend"}
           </Text>
@@ -305,13 +297,13 @@ export default function FriendProfile() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
   },
 
   container: {
     paddingHorizontal: 20,
     paddingBottom: 32,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
   },
 
   header: {
@@ -319,7 +311,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     paddingBottom: 10,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
   },
 
   backButton: {
@@ -329,47 +321,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-    marginBottom: 18,
-  },
-
-  avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: "#ddd",
-    marginRight: 16,
-  },
-
-  profileInfo: {
-    flex: 1,
-  },
-
-  username: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#111",
-    marginBottom: 6,
-  },
-
-  bio: {
-    fontSize: 15,
-    color: "#777",
-    marginBottom: 10,
-  },
-
-  friendCount: {
-    fontSize: 15,
-    color: "#111",
+  profileHeaderWrapper: {
+    marginTop: -12,
   },
 
   addButton: {
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#111",
+    backgroundColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -378,7 +337,7 @@ const styles = StyleSheet.create({
   },
 
   addButtonText: {
-    color: "#fff",
+    color: theme.colors.surface,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -386,7 +345,7 @@ const styles = StyleSheet.create({
   friendButton: {
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: theme.colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -395,7 +354,7 @@ const styles = StyleSheet.create({
   },
 
   friendButtonText: {
-    color: "#111",
+    color: theme.colors.text,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -403,7 +362,10 @@ const styles = StyleSheet.create({
   tabRow: {
     flexDirection: "row",
     gap: 24,
-    marginBottom: 20,
+    paddingBottom: 12,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(17, 24, 39, 0.06)",
   },
 
   gridPlaceHolder: {
@@ -435,13 +397,13 @@ const styles = StyleSheet.create({
 
   stateText: {
     fontSize: 15,
-    color: "#666",
+    color: theme.colors.textMuted,
     textAlign: "center",
   },
 
   errorText: {
     fontSize: 15,
-    color: "#c62828",
+    color: theme.colors.danger,
     textAlign: "center",
   },
 });

@@ -14,6 +14,7 @@ import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import Card from "@/components/ui/Card";
 import { theme } from "@/theme";
+import { Ionicons } from "@expo/vector-icons";
 
 type FeedReview = {
   id: string;
@@ -124,14 +125,14 @@ const Social = () => {
               <Card key={review.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.userRow}>
-                    {profilePic ? (
-                      <Image
-                        source={{ uri: profilePic }}
-                        style={styles.avatar}
-                      />
-                    ) : (
-                      <View style={styles.avatar} />
-                    )}
+                    <Image
+                      source={
+                        profilePic
+                          ? { uri: profilePic }
+                          : require("@/assets/images/default-avatar.png")
+                      }
+                      style={styles.avatar}
+                    />
 
                     <View style={styles.headerTextGroup}>
                       <Text style={styles.username}>{username}</Text>
@@ -166,13 +167,17 @@ const Social = () => {
 
                 <View style={styles.metaRow}>
                   <View style={styles.ratingRow}>
-                    <Feather name="star" size={14} color="#f59e0b" />
+                    <Ionicons
+                      name="star"
+                      size={14}
+                      color={theme.colors.accent}
+                    />
                     <Text style={styles.ratingText}>{review.rating}</Text>
                   </View>
 
                   {review.createdAt ? (
                     <Text style={styles.metaText}>
-                      on {formatFeedDate(review.createdAt)}
+                      {formatFeedDate(review.createdAt)}
                     </Text>
                   ) : null}
                 </View>
@@ -200,27 +205,27 @@ export default Social;
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.background,
   },
 
   header: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.background,
   },
 
   title: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#111",
+    fontWeight: "900",
+    color: theme.colors.text,
     textAlign: "center",
   },
 
   container: {
     paddingHorizontal: 20,
     paddingBottom: 32,
-    gap: 14,
+    gap: 16,
   },
 
   stateContainer: {
@@ -232,17 +237,26 @@ const styles = StyleSheet.create({
 
   stateText: {
     fontSize: 15,
-    color: "#666",
+    color: theme.colors.textMuted,
     textAlign: "center",
   },
 
   errorText: {
     fontSize: 15,
     textAlign: "center",
+    color: theme.colors.danger,
   },
 
   card: {
     padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: "rgba(17, 24, 39, 0.055)",
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.045,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
 
   cardHeader: {
@@ -281,8 +295,8 @@ const styles = StyleSheet.create({
 
   username: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#111",
+    fontWeight: "800",
+    color: theme.colors.text,
   },
 
   actionText: {
@@ -292,8 +306,8 @@ const styles = StyleSheet.create({
 
   placeLink: {
     fontSize: 12,
-    color: "#111",
-    fontWeight: "500",
+    color: theme.colors.text,
+    fontWeight: "600",
   },
 
   metaRow: {
@@ -310,7 +324,7 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 13,
     fontWeight: "600",
-    color: theme.colors.textMuted,
+    color: theme.colors.accent,
     marginLeft: 4,
   },
 

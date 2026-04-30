@@ -1,5 +1,5 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 
 import Card from "@/components/ui/Card";
 import { theme } from "@/theme";
@@ -52,7 +52,7 @@ export default function ProfilePostCard({
         </View>
 
         <View style={styles.cardRatingRow}>
-          <Feather name="star" size={12} color={theme.colors.accent} />
+          <Ionicons name="star" size={12} color={theme.colors.accent} />
           <Text style={styles.cardRating}>{post.rating}</Text>
           {post.category ? (
             <Text style={styles.cardCategoryInline}>{post.category}</Text>
@@ -71,7 +71,15 @@ export default function ProfilePostCard({
 
 const styles = StyleSheet.create({
   card: {
-    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(17, 24, 39, 0.06)",
+    backgroundColor: theme.colors.surface,
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
+    // overflow: "hidden",
   },
 
   cardImage: {
@@ -112,7 +120,7 @@ const styles = StyleSheet.create({
   cardRating: {
     fontSize: 12,
     fontWeight: "600",
-    color: theme.colors.textMuted,
+    color: theme.colors.accent,
   },
 
   cardCategoryInline: {

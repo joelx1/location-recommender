@@ -17,6 +17,7 @@ import {
   isSamePlaceByNameAndAddress,
   normalizePlaceText,
 } from "@/services/placeMapper";
+import { theme } from "@/theme";
 
 type BackendReview = {
   id: string;
@@ -25,6 +26,7 @@ type BackendReview = {
   createdAt?: string;
   user?: {
     username?: string;
+    profilePic?: string | null;
   };
 };
 
@@ -184,6 +186,7 @@ const Search = () => {
           user: review.user?.username ?? "Anonymous",
           rating: review.rating,
           body: review.body ?? "",
+          profilePic: review.user?.profilePic ?? null,
         })),
       };
 
@@ -226,9 +229,7 @@ const Search = () => {
     // <ScreenWrapper>
 
     <View style={styles.container}>
-      {error ? (
-        <Text style={{ color: "red", padding: 16 }}>{error}</Text>
-      ) : null}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <MapView
         style={StyleSheet.absoluteFill}
@@ -246,7 +247,7 @@ const Search = () => {
             }}
             pinColor={
               location.friendReviewCount && location.friendReviewCount > 0
-                ? "#f59e0b"
+                ? theme.colors.accent
                 : undefined
             }
             onPress={() => handleSelectLocation(location)}
@@ -311,6 +312,7 @@ const Search = () => {
       {selectedLocation && (
         <LocationDetailCard
           location={selectedLocation}
+          bottomOffset={88}
           onClose={handleClearSelection}
           onViewMore={() =>
             router.push({
@@ -340,10 +342,10 @@ const styles = StyleSheet.create({
 
   suggestionsList: {
     marginTop: 8,
-    backgroundColor: "white",
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     paddingVertical: 6,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -365,8 +367,8 @@ const styles = StyleSheet.create({
   newPlaceBadge: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#2563eb",
-    backgroundColor: "#eaf2ff",
+    color: theme.colors.primary,
+    backgroundColor: theme.colors.primarySoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
@@ -376,13 +378,18 @@ const styles = StyleSheet.create({
   suggestionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111",
+    color: theme.colors.text,
     flex: 1,
   },
 
   suggestionMeta: {
     marginTop: 2,
     fontSize: 12,
-    color: "#666",
+    color: theme.colors.textMuted,
+  },
+
+  errorText: {
+    color: theme.colors.danger,
+    padding: 16,
   },
 });

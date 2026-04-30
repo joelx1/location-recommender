@@ -3,6 +3,7 @@ import { Text, View, StyleSheet } from "react-native";
 import type { PlaceResult } from "@/types/place";
 import SearchBar from "@/components/search/SearchBar";
 import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
 
 // Reusable place search UI for screens that show a search box and selectable place results.
 
@@ -74,13 +75,13 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 14,
-    color: "#666",
+    color: theme.colors.textMuted,
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
   errorText: {
     fontSize: 14,
-    color: "#c62828",
+    color: theme.colors.danger,
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
@@ -90,12 +91,12 @@ const styles = StyleSheet.create({
   suggestionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#111",
+    color: theme.colors.text,
     marginBottom: 4,
   },
   suggestionMeta: {
     fontSize: 13,
-    color: "#666",
+    color: theme.colors.textMuted,
     lineHeight: 18,
   },
 });

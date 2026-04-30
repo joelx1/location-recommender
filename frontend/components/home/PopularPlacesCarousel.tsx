@@ -6,6 +6,7 @@ import {
   View,
 } from "react-native";
 import PlaceCategoryImage from "@/components/places/PlaceCategoryImage";
+import { theme } from "@/theme";
 
 export type PopularPlace = {
   id: string;
@@ -58,7 +59,7 @@ const PopularPlacesCarousel = ({ mode, places, onSelectPlace }: Props) => {
 
               <Text style={styles.popularCardMeta} numberOfLines={1}>
                 {place.hasReviews
-                  ? `${place.category} · ${place.meta}`
+                  ? `${place.meta} rating · ${place.category}`
                   : place.category}
               </Text>
             </View>
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "900",
-    color: "#111",
+    color: theme.colors.text,
   },
 
   popularScroll: {
@@ -93,7 +94,7 @@ const styles = StyleSheet.create({
     marginRight: 14,
     borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: "#EEEEEE",
+    backgroundColor: theme.colors.surfaceMuted,
   },
 
   popularCardImage: {
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
   },
 
   popularCardTitle: {
-    color: "#FFFFFF",
+    color: theme.colors.surface,
     fontSize: 19,
     fontWeight: "900",
   },

@@ -1,19 +1,19 @@
 export const theme = {
   colors: {
-    primary: "#0F766E",
-    primarySoft: "#E6F4F1",
-    accent: "#F59E0B",
-    accentSoft: "#FEF3C7",
+    primary: "#0E6F68",
+    primarySoft: "#E7F3F1",
+    accent: "#D97706",
+    accentSoft: "#FFF3D6",
 
-    background: "#F8FAFC",
+    background: "#FAFAF8",
     surface: "#FFFFFF",
-    surfaceMuted: "#F3F4F6",
+    surfaceMuted: "#F4F5F3",
 
     text: "#111827",
-    textMuted: "#6B7280",
-    textSubtle: "#9CA3AF",
+    textMuted: "#5F6673",
+    textSubtle: "#8F96A3",
 
-    border: "#E5E7EB",
+    border: "#E6E3DC",
     danger: "#C62828",
     shadow: "#000000",
     overlay: "rgba(0, 0, 0, 0.7)",
@@ -37,10 +37,10 @@ export const theme = {
   shadows: {
     card: {
       shadowColor: "#000000",
-      shadowOpacity: 0.04,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 1,
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 5 },
+      elevation: 2,
     },
   },
 };

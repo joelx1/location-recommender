@@ -1,7 +1,9 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
+import { Ionicons } from "@expo/vector-icons";
 
 // Reusable bottom card for showing a selected map location and its review preview.
 
@@ -10,6 +12,7 @@ export type LocationReviewPreview = {
   user: string;
   rating: number;
   body: string;
+  profilePic?: string | null;
 };
 
 export type MapLocation = {
@@ -41,7 +44,7 @@ const LocationDetailCard = ({
   return (
     <Card style={[styles.detailCard, { bottom: bottomOffset }]}>
       <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-        <Feather name="x" size={20} color="#666" />
+        <Feather name="x" size={20} color={theme.colors.textMuted} />
       </TouchableOpacity>
 
       <Text style={styles.title}>{location.title}</Text>
@@ -61,10 +64,37 @@ const LocationDetailCard = ({
       {location.reviews.length > 0 ? (
         location.reviews.map((review) => (
           <View key={review.id} style={styles.reviewCard}>
-            <Text style={styles.reviewUser}>
-              {review.user} · {review.rating}/5
-            </Text>
-            <Text style={styles.reviewBody}>{review.body}</Text>
+            <View style={styles.reviewHeader}>
+              <Image
+                source={
+                  review.profilePic
+                    ? { uri: review.profilePic }
+                    : require("@/assets/images/default-avatar.png")
+                }
+                style={styles.reviewAvatar}
+              />
+
+              <View style={styles.reviewTextGroup}>
+                <View style={styles.reviewMetaRow}>
+                  <Text style={styles.reviewUser} numberOfLines={1}>
+                    {review.user}
+                  </Text>
+
+                  <View style={styles.reviewRatingRow}>
+                    <Ionicons
+                      name="star"
+                      size={13}
+                      color={theme.colors.accent}
+                    />
+                    <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.reviewBody} numberOfLines={2}>
+                  {review.body}
+                </Text>
+              </View>
+            </View>
           </View>
         ))
       ) : (
@@ -96,26 +126,27 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontWeight: "800",
+    fontWeight: "900",
     fontSize: 18,
     marginBottom: 4,
+    color: theme.colors.text,
   },
 
   category: {
     fontSize: 14,
-    color: "#666",
+    color: theme.colors.textMuted,
     marginBottom: 4,
   },
 
   address: {
     fontSize: 14,
-    color: "#444",
+    color: theme.colors.textMuted,
     marginBottom: 10,
   },
 
   friendActivityText: {
     fontSize: 13,
-    color: "#a16207",
+    color: theme.colors.accent,
     fontWeight: "600",
     marginBottom: 2,
   },
@@ -123,31 +154,48 @@ const styles = StyleSheet.create({
   reviewSection: {
     fontSize: 16,
     fontWeight: "800",
-    marginTop: 8,
-    marginBottom: 8,
+    marginTop: 7,
+    marginBottom: 7,
+    color: theme.colors.text,
   },
 
   reviewCard: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: "rgba(244, 245, 243, 0.78)",
+    borderRadius: theme.radius.md,
+    paddingHorizontal: 11,
+    paddingVertical: 10,
     marginBottom: 8,
   },
 
-  reviewUser: {
-    fontSize: 13,
-    fontWeight: "bold",
+  reviewTextGroup: {
+    flex: 1,
+    minWidth: 0,
+  },
+
+  reviewMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 10,
     marginBottom: 4,
+  },
+
+  reviewUser: {
+    flexShrink: 1,
+    fontSize: 14,
+    fontWeight: "800",
+    color: theme.colors.text,
   },
 
   reviewBody: {
     fontSize: 13,
-    color: "#333",
+    lineHeight: 19,
+    color: theme.colors.textMuted,
   },
 
   noReviewsText: {
     fontSize: 13,
-    color: "#777",
+    color: theme.colors.textMuted,
   },
 
   viewMoreButton: {
@@ -158,6 +206,32 @@ const styles = StyleSheet.create({
   viewMoreText: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#2563eb",
+    color: theme.colors.primary,
+  },
+
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+  },
+
+  reviewAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.surface,
+    overflow: "hidden",
+  },
+
+  reviewRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+
+  reviewRatingText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: theme.colors.accent,
   },
 });
