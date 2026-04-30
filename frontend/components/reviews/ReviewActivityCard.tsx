@@ -1,6 +1,8 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Image, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import PlaceCategoryImage from "@/components/places/PlaceCategoryImage";
+import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
 
 export type ReviewActivityItem = {
   id: string;
@@ -63,12 +65,7 @@ const ReviewActivityCard = ({ post, onPress }: Props) => {
   const category = getPostLocationCategory(post);
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.85}
-      disabled={!onPress}
-      onPress={onPress}
-    >
+    <Card style={styles.card} onPress={onPress}>
       <View style={styles.imageWrapper}>
         {post.photoUrl ? (
           <Image
@@ -85,11 +82,14 @@ const ReviewActivityCard = ({ post, onPress }: Props) => {
         <View style={styles.topRow}>
           <View style={styles.userRow}>
             <View style={styles.avatar}>
-              {profilePic ? (
-                <Image source={{ uri: profilePic }} style={styles.fullImg} />
-              ) : (
-                <Feather name="user" size={11} color="#999" />
-              )}
+              <Image
+                source={
+                  profilePic
+                    ? { uri: profilePic }
+                    : require("@/assets/images/default-avatar.png")
+                }
+                style={styles.fullImg}
+              />
             </View>
 
             <Text style={styles.username} numberOfLines={1}>
@@ -105,8 +105,8 @@ const ReviewActivityCard = ({ post, onPress }: Props) => {
         </Text>
 
         <View style={styles.metaRow}>
-          <Ionicons name="star" size={13} color="#D97706" />
-          <Text style={styles.ratingText}>{post.rating}/5</Text>
+          <Ionicons name="star" size={13} color={theme.colors.accent} />
+          <Text style={styles.ratingText}>{post.rating}</Text>
           <Text style={styles.categoryText} numberOfLines={1}>
             {category}
           </Text>
@@ -118,7 +118,7 @@ const ReviewActivityCard = ({ post, onPress }: Props) => {
           </Text>
         ) : null}
       </View>
-    </TouchableOpacity>
+    </Card>
   );
 };
 
@@ -128,10 +128,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
     padding: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#EEEEEE",
-    backgroundColor: "#FFFFFF",
   },
 
   imageWrapper: {
@@ -139,7 +135,7 @@ const styles = StyleSheet.create({
     height: 92,
     borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "#F2F2F2",
+    backgroundColor: theme.colors.surfaceMuted,
   },
 
   content: {
@@ -168,7 +164,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 11,
     overflow: "hidden",
-    backgroundColor: "#F0F0F0",
+    backgroundColor: theme.colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -177,18 +173,18 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: "800",
-    color: "#444",
+    color: theme.colors.textMuted,
   },
 
   date: {
     fontSize: 12,
-    color: "#AAAAAA",
+    color: theme.colors.textSubtle,
   },
 
   placeTitle: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#111",
+    color: theme.colors.text,
   },
 
   metaRow: {
@@ -201,20 +197,20 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#D97706",
+    color: theme.colors.accent,
   },
 
   categoryText: {
     flex: 1,
     marginLeft: 4,
     fontSize: 13,
-    color: "#999",
+    color: theme.colors.textSubtle,
   },
 
   body: {
     marginTop: 6,
     fontSize: 13,
-    color: "#666",
+    color: theme.colors.textMuted,
   },
 
   fullImg: {

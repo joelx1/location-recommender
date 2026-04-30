@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import type { PlaceResult, PlaceSource } from "@/types/place";
+import { theme } from "@/theme";
 
 type ReviewPayload = {
   user: {
@@ -282,7 +283,11 @@ const AddReview = () => {
               onPress={() => router.back()}
               style={styles.backButton}
             >
-              <Feather name="chevron-left" size={26} color="#111" />
+              <Feather
+                name="chevron-left"
+                size={26}
+                color={theme.colors.text}
+              />
             </TouchableOpacity>
 
             <Text style={styles.reviewTitle}>
@@ -310,7 +315,9 @@ const AddReview = () => {
                   <Feather
                     name="star"
                     size={34}
-                    color={selected ? "#111" : "#bbb"}
+                    color={
+                      selected ? theme.colors.accent : theme.colors.textSubtle
+                    }
                   />
                 </Pressable>
               );
@@ -321,7 +328,7 @@ const AddReview = () => {
             <TextInput
               style={styles.textInput}
               placeholder="Add review..."
-              placeholderTextColor="#777"
+              placeholderTextColor={theme.colors.textMuted}
               multiline
               textAlignVertical="top"
               value={reviewText}
@@ -340,7 +347,7 @@ const AddReview = () => {
                   onPress={handleRemoveImage}
                   style={styles.removeImageButton}
                 >
-                  <Feather name="x" size={14} color="#fff" />
+                  <Feather name="x" size={14} color={theme.colors.surface} />
                 </TouchableOpacity>
               </View>
             ) : (
@@ -349,14 +356,22 @@ const AddReview = () => {
                   style={styles.mediaButton}
                   onPress={handlePickImage}
                 >
-                  <Feather name="image" size={28} color="#333" />
+                  <Feather
+                    name="image"
+                    size={28}
+                    color={theme.colors.textMuted}
+                  />
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.mediaButton}
                   onPress={handleTakePhoto}
                 >
-                  <Feather name="camera" size={28} color="#333" />
+                  <Feather
+                    name="camera"
+                    size={28}
+                    color={theme.colors.textMuted}
+                  />
                 </TouchableOpacity>
               </>
             )}
@@ -382,7 +397,7 @@ export default AddReview;
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
   },
   container: {
     flex: 1,
@@ -408,8 +423,8 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     fontSize: 18,
-    fontWeight: "600",
-    color: "#111",
+    fontWeight: "900",
+    color: theme.colors.text,
   },
   headerSpacer: {
     width: 36,
@@ -417,7 +432,7 @@ const styles = StyleSheet.create({
   reviewAddress: {
     textAlign: "center",
     fontSize: 13,
-    color: "#777",
+    color: theme.colors.textMuted,
     marginBottom: 28,
   },
   starsRow: {
@@ -431,7 +446,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   editorCard: {
-    backgroundColor: "#f2f2f2",
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 26,
     paddingHorizontal: 18,
     paddingTop: 18,
@@ -441,7 +456,7 @@ const styles = StyleSheet.create({
   textInput: {
     minHeight: 150,
     fontSize: 16,
-    color: "#111",
+    color: theme.colors.text,
   },
   mediaSection: {
     flexDirection: "row",
@@ -453,7 +468,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 18,
-    backgroundColor: "#dddddd",
+    backgroundColor: theme.colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -461,7 +476,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#111",
+    backgroundColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -469,7 +484,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   postButtonText: {
-    color: "#fff",
+    color: theme.colors.surface,
     fontSize: 17,
     fontWeight: "600",
   },

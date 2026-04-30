@@ -14,6 +14,7 @@ import { router } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import * as ImagePicker from "expo-image-picker";
+import { theme } from "@/theme";
 
 type BackendUser = {
   id: string;
@@ -48,8 +49,8 @@ const EditProfile = () => {
         const userData: BackendUser = await response.json();
 
         setUsername(userData.username ?? "");
-        setBio(userData.bio ?? "");
-        setEmail(userData.email ?? "");
+        setBio(userData.bio?.trim() ?? "");
+        setEmail(userData.email?.trim() ?? "");
         setProfilePic(userData.profilePic ?? null);
       } catch (error) {
         console.log("fetch user error:", error);
@@ -169,7 +170,7 @@ const EditProfile = () => {
   if (loading) {
     return (
       <ScreenWrapper style={styles.container}>
-        <Text>Loading profile...</Text>
+          <Text style={styles.loadingText}>Loading profile...</Text>
       </ScreenWrapper>
     );
   }
@@ -200,7 +201,7 @@ const EditProfile = () => {
             style={styles.uploadIconButton}
             onPress={handlePickProfileImage}
           >
-            <Feather name="camera" size={24} color="white" />
+            <Feather name="camera" size={24} color={theme.colors.surface} />
           </TouchableOpacity>
         </View>
       </View>
@@ -249,6 +250,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
+    backgroundColor: theme.colors.surface,
   },
 
   avatarSection: {
@@ -263,8 +265,8 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: "#fff",
-    backgroundColor: "#fff",
+    borderColor: theme.colors.surface,
+    backgroundColor: theme.colors.surface,
   },
 
   avatar: {
@@ -297,17 +299,18 @@ const styles = StyleSheet.create({
 
   label: {
     fontSize: 14,
-    color: "black",
+    color: theme.colors.text,
   },
 
   input: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 15,
-    backgroundColor: "#f3f3f3",
+    backgroundColor: theme.colors.surfaceMuted,
+    color: theme.colors.text,
   },
 
   bioInput: {
@@ -324,12 +327,16 @@ const styles = StyleSheet.create({
 
   cancelText: {
     fontSize: 16,
-    color: "black",
+    color: theme.colors.text,
   },
 
   saveText: {
     fontSize: 16,
-    color: "black",
+    color: theme.colors.primary,
     fontWeight: "500",
+  },
+
+  loadingText: {
+    color: theme.colors.textMuted,
   },
 });
