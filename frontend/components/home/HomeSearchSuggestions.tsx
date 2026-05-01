@@ -1,6 +1,7 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
 import type { PlaceResult } from "@/types/place";
+import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
 
 export type HomeSearchPlace = {
   type: "place";
@@ -42,7 +43,7 @@ const HomeSearchSuggestions = ({
   if (!visible) return null;
 
   return (
-    <View style={styles.list}>
+    <Card style={styles.list}>
       {users.length > 0 && (
         <>
           <Text style={styles.sectionLabel}>People</Text>
@@ -54,14 +55,14 @@ const HomeSearchSuggestions = ({
               onPress={() => onSelectUser(user)}
             >
               <View style={styles.avatar}>
-                {user.profilePic ? (
-                  <Image
-                    source={{ uri: user.profilePic }}
-                    style={styles.fullImg}
-                  />
-                ) : (
-                  <Feather name="user" size={14} color="#999" />
-                )}
+                <Image
+                  source={
+                    user.profilePic
+                      ? { uri: user.profilePic }
+                      : require("@/assets/images/default-avatar.png")
+                  }
+                  style={styles.fullImg}
+                />
               </View>
 
               <View style={styles.textGroup}>
@@ -122,7 +123,7 @@ const HomeSearchSuggestions = ({
           ))}
         </>
       )}
-    </View>
+    </Card>
   );
 };
 
@@ -132,14 +133,7 @@ const styles = StyleSheet.create({
     top: 58,
     left: 0,
     right: 0,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
     paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
   },
 
   sectionLabel: {
@@ -148,7 +142,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
     fontSize: 11,
     fontWeight: "800",
-    color: "#999",
+    color: theme.colors.textSubtle,
     textTransform: "uppercase",
   },
 
@@ -169,7 +163,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: theme.colors.surfaceMuted,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -183,13 +177,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#111",
+    color: theme.colors.text,
   },
 
   meta: {
     marginTop: 2,
     fontSize: 12,
-    color: "#777",
+    color: theme.colors.textMuted,
   },
 
   titleRow: {
@@ -203,19 +197,19 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 14,
     fontWeight: "700",
-    color: "#111",
+    color: theme.colors.text,
   },
 
   newBadge: {
     flexShrink: 0,
     overflow: "hidden",
     borderRadius: 999,
-    backgroundColor: "#EAF2FF",
+    backgroundColor: theme.colors.primarySoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
     fontSize: 11,
     fontWeight: "700",
-    color: "#2563EB",
+    color: theme.colors.primary,
   },
 
   fullImg: {

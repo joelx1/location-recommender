@@ -6,6 +6,7 @@ import {
   type StyleProp,
 } from "react-native";
 import { getPlaceImage } from "@/utils/placeImages";
+import { theme } from "@/theme";
 
 type Props = {
   category: string;
@@ -26,6 +27,6 @@ export default PlaceCategoryImage;
 
 const styles = StyleSheet.create({
   image: {
-    backgroundColor: "#E0E0E0",
+    backgroundColor: theme.colors.surfaceMuted,
   },
 });

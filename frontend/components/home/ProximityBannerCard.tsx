@@ -1,5 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
 
 export type ProximityBannerData = {
   locationId: string;
@@ -17,14 +19,14 @@ type Props = {
 
 const ProximityBannerCard = ({ banner, onPress, onDismiss }: Props) => {
   return (
-    <View style={styles.card}>
+    <Card style={styles.card}>
       <TouchableOpacity
         style={styles.main}
         activeOpacity={0.85}
         onPress={onPress}
       >
         <View style={styles.icon}>
-          <Feather name="map-pin" size={17} color="#2563EB" />
+          <Feather name="map-pin" size={17} color={theme.colors.primary} />
         </View>
 
         <View style={styles.textGroup}>
@@ -36,10 +38,18 @@ const ProximityBannerCard = ({ banner, onPress, onDismiss }: Props) => {
             {banner.username} recommends this place
           </Text>
 
-          <Text style={styles.text} numberOfLines={1}>
-            {banner.locationName}
-            {banner.rating ? ` · ${banner.rating}/5` : ""}
-          </Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.text} numberOfLines={1}>
+              {banner.locationName}
+            </Text>
+
+            {banner.rating ? (
+              <View style={styles.ratingRow}>
+                <Ionicons name="star" size={12} color={theme.colors.accent} />
+                <Text style={styles.ratingText}>{banner.rating}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       </TouchableOpacity>
 
@@ -48,9 +58,9 @@ const ProximityBannerCard = ({ banner, onPress, onDismiss }: Props) => {
         hitSlop={12}
         onPress={onDismiss}
       >
-        <Feather name="x" size={20} color="#777" />
+        <Feather name="x" size={20} color={theme.colors.textMuted} />
       </TouchableOpacity>
-    </View>
+    </Card>
   );
 };
 
@@ -58,10 +68,6 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#EEEEEE",
-    backgroundColor: "#FFFFFF",
     marginBottom: 24,
     paddingRight: 10,
   },
@@ -77,7 +83,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: theme.colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -89,18 +95,34 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     fontSize: 11,
     fontWeight: "800",
-    color: "#2563EB",
+    color: theme.colors.primary,
     textTransform: "uppercase",
   },
   title: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#111",
+    color: theme.colors.text,
   },
   text: {
-    marginTop: 3,
+    flexShrink: 1,
     fontSize: 12,
-    color: "#777",
+    color: theme.colors.textMuted,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 3,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: theme.colors.accent,
   },
   closeButton: {
     width: 36,

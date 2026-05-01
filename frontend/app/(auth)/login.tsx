@@ -1,7 +1,14 @@
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ScreenWrapper from "@/components/ScreenWrapper";
+import { theme } from "@/theme";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -28,7 +35,7 @@ export default function LoginScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={theme.colors.surface} />
           ) : (
             <Text style={styles.buttonText}>Sign in with Microsoft</Text>
           )}
@@ -49,15 +56,16 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "bold",
     marginBottom: 8,
+    color: theme.colors.text,
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
+    color: theme.colors.textMuted,
     marginBottom: 48,
     textAlign: "center",
   },
   button: {
-    backgroundColor: "#0078D4",
+    backgroundColor: theme.colors.primary,
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -68,7 +76,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: "#fff",
+    color: theme.colors.surface,
     fontSize: 16,
     fontWeight: "600",
   },

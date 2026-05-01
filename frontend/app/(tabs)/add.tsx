@@ -11,6 +11,7 @@ import PlaceSearchList from "@/components/places/PlaceSearchList";
 import { router } from "expo-router";
 import { useGooglePlaceSearch } from "@/hooks/useGooglePlaceSearch";
 import { useBackendPlaces } from "@/hooks/useBackendPlaces";
+import { theme } from "@/theme";
 
 const Add = () => {
   const { token } = useAuth();
@@ -85,7 +86,7 @@ export default Add;
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
   },
 
   container: {
@@ -100,8 +101,8 @@ const styles = StyleSheet.create({
 
   pageTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#111",
+    fontWeight: "900",
+    color: theme.colors.text,
     marginBottom: 16,
     textAlign: "center",
   },

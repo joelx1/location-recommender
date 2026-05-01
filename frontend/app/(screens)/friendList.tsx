@@ -5,6 +5,7 @@ import Feather from "@expo/vector-icons/Feather";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import { theme } from "@/theme";
 
 type Friend = {
   id: string;
@@ -59,7 +60,7 @@ export default function FriendList() {
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Feather name="arrow-left" size={22} color="#111" />
+          <Feather name="arrow-left" size={22} color={theme.colors.text} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Friends</Text>
@@ -79,7 +80,7 @@ export default function FriendList() {
         ) : friends.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
-              <Feather name="users" size={30} color="#777" />
+              <Feather name="users" size={30} color={theme.colors.textMuted} />
             </View>
 
             <Text style={styles.emptyTitle}>No friends yet</Text>
@@ -118,7 +119,11 @@ export default function FriendList() {
                 </Text>
               </View>
 
-              <Feather name="chevron-right" size={20} color="#999" />
+              <Feather
+                name="chevron-right"
+                size={20}
+                color={theme.colors.textSubtle}
+              />
             </TouchableOpacity>
           ))
         )}
@@ -130,7 +135,7 @@ export default function FriendList() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.background,
   },
 
   header: {
@@ -139,7 +144,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.background,
   },
 
   backButton: {
@@ -152,8 +157,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 16,
-    fontWeight: "700",
-    color: "#111",
+    fontWeight: "900",
+    color: theme.colors.text,
     textAlign: "center",
   },
 
@@ -174,15 +179,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 14,
     borderRadius: 18,
-    backgroundColor: "#f7f7f7",
+    backgroundColor: theme.colors.surface,
     marginBottom: 10,
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
 
   avatar: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#ddd",
+    backgroundColor: theme.colors.surfaceMuted,
     marginRight: 12,
   },
 
@@ -193,13 +203,13 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111",
+    color: theme.colors.text,
   },
 
   bio: {
     marginTop: 4,
     fontSize: 13,
-    color: "#777",
+    color: theme.colors.textMuted,
   },
 
   emptyState: {
@@ -213,7 +223,7 @@ const styles = StyleSheet.create({
     width: 86,
     height: 86,
     borderRadius: 43,
-    backgroundColor: "#f7f7f7",
+    backgroundColor: theme.colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 22,
@@ -222,13 +232,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#111",
+    color: theme.colors.text,
     marginBottom: 10,
   },
 
   emptyText: {
     fontSize: 15,
-    color: "#777",
+    color: theme.colors.textMuted,
     textAlign: "center",
   },
 
@@ -241,13 +251,13 @@ const styles = StyleSheet.create({
 
   stateText: {
     fontSize: 15,
-    color: "#666",
+    color: theme.colors.textMuted,
     textAlign: "center",
   },
 
   errorText: {
     fontSize: 15,
-    color: "#c62828",
+    color: theme.colors.danger,
     textAlign: "center",
   },
 });
