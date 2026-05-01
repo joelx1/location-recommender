@@ -17,6 +17,7 @@ import { useGooglePlaceSearch } from "@/hooks/useGooglePlaceSearch";
 import LocationDetailCard from "@/components/places/LocationDetailCard";
 import type { MapLocation } from "@/components/places/LocationDetailCard";
 import { useBackendPlaces } from "@/hooks/useBackendPlaces";
+import SearchBar from "@/components/search/SearchBar";
 
 type BackendReview = {
   id: string;
@@ -243,30 +244,18 @@ const Search = () => {
       </MapView>
 
       <View style={styles.searchWrapper}>
-        <View style={styles.searchBar}>
-          <Feather name="search" size={18} color="#666" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search location"
-            placeholderTextColor="#888"
-            value={searchText}
-            onChangeText={setSearchText}
-            onSubmitEditing={() => {
-              if (filteredLocations.length > 0) {
-                handleSelectLocation(filteredLocations[0]);
-              }
-            }}
-          />
-
-          {searchText.trim().length > 0 && (
-            <TouchableOpacity
-              onPress={handleClearSelection}
-              style={styles.cancelButton}
-            >
-              <Feather name="x" size={18} color="#666" />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchBar
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="Search location"
+          onSubmitEditing={() => {
+            if (filteredLocations.length > 0) {
+              handleSelectLocation(filteredLocations[0]);
+            }
+          }}
+          onClear={handleClearSelection}
+          variant="floating"
+        />
 
         {showSuggestions && (
           <View style={styles.suggestionsList}>
