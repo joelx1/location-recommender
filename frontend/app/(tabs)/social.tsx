@@ -15,21 +15,17 @@ import { useAuth } from "@/context/AuthContext";
 
 type FeedReview = {
   id: string;
+  userId?: string;
+  username?: string;
+  profilePic?: string | null;
+  locationId?: string;
+  locationName?: string;
+  locationCategory?: string | null;
+  locationAddress?: string | null;
   rating: number;
   body: string | null;
   photoUrl?: string | null;
   createdAt?: string;
-  user?: {
-    id: string;
-    username?: string;
-    profilePic?: string | null;
-  };
-  location?: {
-    id: string;
-    name?: string;
-    category?: string;
-    address?: string | null;
-  };
 };
 
 const formatFeedDate = (dateString: string) => {
@@ -110,8 +106,8 @@ const Social = () => {
           contentContainerStyle={styles.container}
         >
           {feed.map((review) => {
-            const username = review.user?.username ?? "Anonymous";
-            const placeName = review.location?.name ?? "Unknown place";
+            const username = review.username ?? "Friend";
+            const placeName = review.locationName ?? "Unknown place";
             const body = review.body?.trim();
             const hasImage = Boolean(review.photoUrl);
 
@@ -119,9 +115,9 @@ const Social = () => {
               <View key={review.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.userRow}>
-                    {review.user?.profilePic ? (
+                    {review.profilePic ? (
                       <Image
-                        source={{ uri: review.user.profilePic }}
+                        source={{ uri: review.profilePic }}
                         style={styles.avatar}
                       />
                     ) : (
@@ -136,10 +132,10 @@ const Social = () => {
 
                         <TouchableOpacity
                           onPress={() => {
-                            if (review.location?.id) {
+                            if (review.locationId) {
                               router.push({
                                 pathname: "/placeDetails",
-                                params: { id: review.location.id },
+                                params: { id: review.locationId },
                               });
                             }
                           }}

@@ -2,31 +2,34 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import * as SecureStore from "expo-secure-store";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  User as FirebaseUser,
+} from "firebase/auth";
+import { auth as firebaseAuth } from "@/firebase";
 
-// Required for Android — closes the browser tab after the redirect back to the app
 WebBrowser.maybeCompleteAuthSession();
 
 // ── Azure Entra External ID config ───────────────────────────────────────────
 const TENANT_NAME = "locationreviewapp";
 const FRONTEND_CLIENT_ID = "bdf8ace0-d7a5-4c7b-bd9e-0eeae9ee0881";
 const BACKEND_CLIENT_ID = "7a30bda2-0b4d-4b28-803f-6df60ced1f48";
-// Set EXPO_PUBLIC_API_BASE_URL in your .env file — see .env.example
 export const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-// ─────────────────────────────────────────────────────────────────────────────
 
-// This is the scope the frontend requests — it asks for a token scoped to our backend API
 const BACKEND_SCOPE = `api://${BACKEND_CLIENT_ID}/access_as_user`;
 
-// Entra External ID uses ciamlogin.com — no policy name in the URL unlike old B2C
 const discovery = {
   authorizationEndpoint: `https://${TENANT_NAME}.ciamlogin.com/${TENANT_NAME}.onmicrosoft.com/oauth2/v2.0/authorize`,
   tokenEndpoint: `https://${TENANT_NAME}.ciamlogin.com/${TENANT_NAME}.onmicrosoft.com/oauth2/v2.0/token`,
   endSessionEndpoint: `https://${TENANT_NAME}.ciamlogin.com/${TENANT_NAME}.onmicrosoft.com/oauth2/v2.0/logout`,
 };
 
-const TOKEN_KEY = "auth_token";
+const AZURE_TOKEN_KEY = "azure_auth_token";
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Matches the User model fields we get back from the backend
 export type DbUser = {
   id: string;
   username: string;
@@ -40,6 +43,8 @@ type AuthContextType = {
   token: string | null;
   user: DbUser | null;
   login: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isLoading: boolean;
 };
@@ -49,7 +54,10 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<DbUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [firebaseReady, setFirebaseReady] = useState(false);
+  const [azureReady, setAzureReady] = useState(false);
+
+  const isLoading = !firebaseReady || !azureReady;
 
   const redirectUri = AuthSession.makeRedirectUri({ scheme: "frontend", path: "auth" });
 
@@ -63,41 +71,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     discovery
   );
 
-  // On app startup: check SecureStore for a saved token and restore the session
-  // This is why users don't have to log in every time they open the app
+  // Restore Firebase session on startup
   useEffect(() => {
-    async function restoreSession() {
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
+      if (firebaseUser && !token) {
+        await syncFirebaseUser(firebaseUser);
+      }
+      setFirebaseReady(true);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Restore Azure session on startup
+  useEffect(() => {
+    async function restoreAzureSession() {
       try {
-        const saved = await SecureStore.getItemAsync(TOKEN_KEY);
+        const saved = await SecureStore.getItemAsync(AZURE_TOKEN_KEY);
         if (saved) {
           const dbUser = await fetchDbUser(saved);
           if (dbUser) {
             setToken(saved);
             setUser(dbUser);
           } else {
-            // Token was invalid or expired — clear it so the user sees the login screen
-            await SecureStore.deleteItemAsync(TOKEN_KEY);
+            await SecureStore.deleteItemAsync(AZURE_TOKEN_KEY);
           }
         }
       } catch {
-        // Ignore errors on restore — user will just log in again
+        // ignore — user will log in again
       } finally {
-        setIsLoading(false);
+        setAzureReady(true);
       }
     }
-    restoreSession();
+    restoreAzureSession();
   }, []);
 
-  // When Entra redirects back to the app with an auth code, exchange it for a token
+  // Handle Azure redirect response
   useEffect(() => {
     if (response?.type === "success") {
-      handleAuthResponse(response.params.code);
+      handleAzureAuthResponse(response.params.code);
     }
   }, [response]);
 
-  async function handleAuthResponse(code: string) {
+  async function handleAzureAuthResponse(code: string) {
     try {
-      // Exchange the authorization code for an access token
       const tokenResponse = await AuthSession.exchangeCodeAsync(
         {
           clientId: FRONTEND_CLIENT_ID,
@@ -109,16 +125,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
 
       const accessToken = tokenResponse.accessToken;
-
-      // Call /auth/me to get our DB user (creates them on first login)
       const dbUser = await fetchDbUser(accessToken);
       if (!dbUser) throw new Error("Failed to resolve database user after login");
 
-      await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
+      await SecureStore.setItemAsync(AZURE_TOKEN_KEY, accessToken);
       setToken(accessToken);
       setUser(dbUser);
     } catch (e) {
-      console.error("Auth error:", e);
+      console.error("Azure auth error:", e);
+    }
+  }
+
+  async function syncFirebaseUser(firebaseUser: FirebaseUser) {
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const dbUser = await fetchDbUser(idToken);
+      if (dbUser) {
+        setToken(idToken);
+        setUser(dbUser);
+      }
+    } catch {
+      setToken(null);
+      setUser(null);
     }
   }
 
@@ -139,20 +167,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await promptAsync();
   }
 
+  async function signInWithEmail(email: string, password: string) {
+    const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+    await syncFirebaseUser(credential.user);
+  }
+
+  async function signUpWithEmail(email: string, password: string) {
+    const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+    await syncFirebaseUser(credential.user);
+  }
+
   async function logout() {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await firebaseSignOut(firebaseAuth);
+    await SecureStore.deleteItemAsync(AZURE_TOKEN_KEY);
     setToken(null);
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ token, user, login, signInWithEmail, signUpWithEmail, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// Any screen can call useAuth() to get token, user, login, logout, isLoading
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be called inside AuthProvider");

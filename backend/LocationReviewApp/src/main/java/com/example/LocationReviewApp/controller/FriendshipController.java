@@ -6,6 +6,7 @@ import com.example.LocationReviewApp.model.FriendshipStatus;
 import com.example.LocationReviewApp.model.User;
 import com.example.LocationReviewApp.repository.FriendshipRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
+import com.example.LocationReviewApp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,6 +27,9 @@ public class FriendshipController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserService userService;
+
     // POST /friends — adds a friend, creating the relationship as ACCEPTED immediately.
     //
     // MVP decision: no pending/request flow. Tapping "Add Friend" on the frontend
@@ -40,7 +44,8 @@ public class FriendshipController {
     public Friendship sendFriendRequest(@RequestBody FriendRequest request,
                                         @AuthenticationPrincipal Jwt jwt) {
 
-        User requester = userRepository.findByAzureOid(jwt.getSubject())
+        // Derive the requester from the JWT — never trust the request body for identity
+        User requester = userService.findFromJwt(jwt)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Authenticated user not found — call /auth/me first"));
@@ -80,7 +85,8 @@ public class FriendshipController {
     public Friendship acceptFriendRequest(@PathVariable UUID id,
                                           @AuthenticationPrincipal Jwt jwt) {
 
-        User receiver = userRepository.findByAzureOid(jwt.getSubject())
+        // Derive the receiver from the JWT — never trust a query parameter for identity
+        User receiver = userService.findFromJwt(jwt)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Authenticated user not found — call /auth/me first"));

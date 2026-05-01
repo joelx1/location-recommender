@@ -36,6 +36,7 @@ import com.example.LocationReviewApp.repository.UserRepository;
 import com.example.LocationReviewApp.service.AzureBlobService;
 import com.example.LocationReviewApp.model.DeviceToken;
 import com.example.LocationReviewApp.repository.DeviceTokenRepository;
+import com.example.LocationReviewApp.service.UserService;
 
 @RestController
 @RequestMapping("/users")
@@ -55,6 +56,9 @@ public class UserController {
 
     @Autowired
     private DeviceTokenRepository deviceTokenRepository;
+
+    @Autowired
+    private UserService userService;
 
     // GET /users — returns all users in the database
     @GetMapping
@@ -111,7 +115,11 @@ public class UserController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
 
-        if (!user.getAzureOid().equals(jwt.getSubject())) {
+        User requester = userService.findFromJwt(jwt)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Authenticated user not found — call /auth/me first"));
+
+        if (!requester.getId().equals(user.getId())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You can only update your own profile");
         }
@@ -132,7 +140,11 @@ public class UserController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
 
-        if (!user.getAzureOid().equals(jwt.getSubject())) {
+        User requester = userService.findFromJwt(jwt)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Authenticated user not found — call /auth/me first"));
+
+        if (!requester.getId().equals(user.getId())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You can only delete your own account");
         }
@@ -213,7 +225,11 @@ public class UserController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
 
-        if (!user.getAzureOid().equals(jwt.getSubject())) {
+        User requester = userService.findFromJwt(jwt)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Authenticated user not found — call /auth/me first"));
+
+        if (!requester.getId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "You can only update your own profile picture"));
         }
