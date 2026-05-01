@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -71,10 +72,13 @@ public class LocationController {
     }
 
     // GET /locations/{id}/social-summary?userId={currentUserId}
-    // Returns how many of the current user's accepted friends have reviewed this location.
-    // Used by the Place Details screen to show e.g. "3 of your friends have been here".
+    // Returns how many of the current user's accepted friends have reviewed this location,
+    // plus their usernames — used by the Place Details screen.
+    //
+    // Response shape:
+    //   { "friendsReviewedCount": 2, "friendReviewerNames": ["Alice", "Bob"] }
     @GetMapping("/{id}/social-summary")
-    public Map<String, Long> getSocialSummary(
+    public Map<String, Object> getSocialSummary(
             @PathVariable UUID id,
             @RequestParam UUID userId) {
 
@@ -85,9 +89,17 @@ public class LocationController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
 
-        long count = reviewRepository.countFriendsReviewedLocation(
+        List<User> friends = reviewRepository.findFriendsWhoReviewedLocation(
                 id, userId, FriendshipStatus.ACCEPTED);
-        return Map.of("friendsReviewedCount", count);
+
+        List<String> names = friends.stream()
+                .map(User::getUsername)
+                .collect(Collectors.toList());
+
+        return Map.of(
+                "friendsReviewedCount", (long) friends.size(),
+                "friendReviewerNames", names
+        );
     }
 
     // POST /locations — creates a new location from the request body.
@@ -148,7 +160,6 @@ public class LocationController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Location not found"));
 
-        // Locations created before auth was added have no createdBy — treat as unowned
         if (location.getCreatedBy() == null) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You can only delete your own locations");

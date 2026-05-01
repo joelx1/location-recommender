@@ -2,6 +2,7 @@ package com.example.LocationReviewApp.repository;
 
 import com.example.LocationReviewApp.model.FriendshipStatus;
 import com.example.LocationReviewApp.model.Review;
+import com.example.LocationReviewApp.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -45,6 +46,18 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
             "OR " +
             "r.user.id IN (SELECT f.requester.id FROM Friendship f WHERE f.receiver.id = :userId AND f.status = :status))")
     long countFriendsReviewedLocation(
+            @Param("locationId") UUID locationId,
+            @Param("userId") UUID userId,
+            @Param("status") FriendshipStatus status);
+
+    // Returns the friends of a given user who have reviewed a specific location
+    // Used by GET /locations/{id}/social-summary to return reviewer names alongside the count
+    // Mirrors the same bidirectional friendship logic as countFriendsReviewedLocation
+    @Query("SELECT DISTINCT r.user FROM Review r WHERE r.location.id = :locationId AND (" +
+            "r.user.id IN (SELECT f.receiver.id FROM Friendship f WHERE f.requester.id = :userId AND f.status = :status) " +
+            "OR " +
+            "r.user.id IN (SELECT f.requester.id FROM Friendship f WHERE f.receiver.id = :userId AND f.status = :status))")
+    List<User> findFriendsWhoReviewedLocation(
             @Param("locationId") UUID locationId,
             @Param("userId") UUID userId,
             @Param("status") FriendshipStatus status);
