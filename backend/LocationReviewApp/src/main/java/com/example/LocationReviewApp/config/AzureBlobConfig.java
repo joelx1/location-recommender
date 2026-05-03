@@ -25,11 +25,6 @@ public class AzureBlobConfig
 
     @Bean
     public BlobContainerClient blobContainerClient(BlobServiceClient blobServiceClient) {
-        BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient(containerName);
-        if (!containerClient.exists())
-        {
-            containerClient.create();
-        }
-        return containerClient;
+        return blobServiceClient.getBlobContainerClient(containerName);
     }
 }
