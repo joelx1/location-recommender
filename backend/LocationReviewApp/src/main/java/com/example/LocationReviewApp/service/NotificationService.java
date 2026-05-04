@@ -8,6 +8,7 @@ import com.example.LocationReviewApp.repository.DeviceTokenRepository;
 import com.example.LocationReviewApp.repository.LocationRepository;
 import com.example.LocationReviewApp.repository.NotificationLogRepository;
 import com.example.LocationReviewApp.repository.ReviewRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -48,6 +49,7 @@ public class NotificationService {
     // Called by NotificationController when the frontend sends a location update.
     // Runs the proximity check, sends notifications, cleans up stale tokens,
     // and writes to notification_log for each successful send.
+    @Transactional
     public void checkAndNotify(User user, double lat, double lng) {
 
         List<DeviceToken> tokens = deviceTokenRepository.findByUserId(user.getId());

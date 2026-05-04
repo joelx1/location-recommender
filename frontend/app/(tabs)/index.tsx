@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import ScreenWrapper from "@/components/ScreenWrapper";
-import * as ExpoLocation from "expo-location";
 import { API_BASE_URL } from "@/services/api";
 import { router } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
@@ -24,6 +23,8 @@ import HomeSearchSuggestions, {
   type HomeSearchPlace,
   type HomeSearchUser,
 } from "@/components/home/HomeSearchSuggestions";
+import { useCurrentLocation } from "@/hooks/useCurrentLocation";
+import { theme } from "@/theme";
 
 type LocationSummary = {
   id: string;
@@ -78,11 +79,6 @@ type ProximityBanner = {
   isNearby: boolean;
 };
 
-const DUBLIN_COORDS = {
-  latitude: 53.3498,
-  longitude: -6.2603,
-};
-
 const normalizeText = (value: string) =>
   value
     .trim()
@@ -94,9 +90,8 @@ const normalizeText = (value: string) =>
 const Index = () => {
   const { token, user } = useAuth();
 
-  const [location, setLocation] = useState("Loading...");
-  const [coords, setCoords] = useState(DUBLIN_COORDS);
-  const [loadingLocation, setLoadingLocation] = useState(false);
+  const { locationLabel, coords, loadingLocation, refreshLocation } =
+    useCurrentLocation();
 
   const [searchText, setSearchText] = useState("");
   const [placeResults, setPlaceResults] = useState<HomeSearchPlace[]>([]);
@@ -116,54 +111,6 @@ const Index = () => {
   const { googleResults, loadingGoogle } = useGooglePlaceSearch(searchText, {
     enabled: searchText.trim().length >= 2,
   });
-
-  const refreshLocation = useCallback(async () => {
-    try {
-      setLoadingLocation(true);
-
-      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
-
-      if (status !== "granted") {
-        setLocation("Permission denied");
-        setCoords(DUBLIN_COORDS);
-        return;
-      }
-
-      const loc = await ExpoLocation.getCurrentPositionAsync({
-        accuracy: ExpoLocation.Accuracy.Highest,
-      });
-
-      const nextCoords = {
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      };
-
-      setCoords(nextCoords);
-
-      const coordsText = `${loc.coords.latitude.toFixed(4)}, ${loc.coords.longitude.toFixed(4)}`;
-      setLocation(coordsText);
-
-      try {
-        const address = await ExpoLocation.reverseGeocodeAsync(nextCoords);
-
-        if (address.length > 0) {
-          setLocation(address[0].city || address[0].region || coordsText);
-        }
-      } catch (reverseError) {
-        console.log("Reverse geocode failed:", reverseError);
-      }
-    } catch (error) {
-      console.log("Location error:", error);
-      setLocation("Location unavailable");
-      setCoords(DUBLIN_COORDS);
-    } finally {
-      setLoadingLocation(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshLocation();
-  }, [refreshLocation]);
 
   useEffect(() => {
     const fetchHomeData = async () => {
@@ -197,19 +144,17 @@ const Index = () => {
 
         const nearbyLocationIds = new Set(nearbyData.map((place) => place.id));
 
-        const nearbyFriendPost = feedData.find((post) => {
-          const postLocationId = post.locationId || post.location?.id;
+        const nearbyFriendPost = nearbyData
+          .map((place) =>
+            feedData.find((post) => {
+              const postLocationId = post.locationId || post.location?.id;
 
-          return (
-            postLocationId &&
-            nearbyLocationIds.has(postLocationId) &&
-            post.rating >= 4
-          );
-        });
+              return postLocationId === place.id && post.rating >= 4;
+            }),
+          )
+          .find((post): post is FeedItem => Boolean(post));
 
-        // Prefer a true nearby friend recommendation. If none exists, fall back to a high-rated friend review so the demo still shows the proximity entry point.
-        const fallbackFriendPost = feedData.find((post) => post.rating >= 4);
-        const bannerPost = nearbyFriendPost || fallbackFriendPost;
+        const bannerPost = nearbyFriendPost;
 
         if (!isProximityBannerDismissed && bannerPost) {
           const bannerLocationId =
@@ -255,7 +200,7 @@ const Index = () => {
               category: place.category,
               address: place.address ?? "No address",
               meta: hasReviews
-                ? `${place.averageRating?.toFixed(1) ?? "0.0"} star`
+                ? `${place.averageRating?.toFixed(1) ?? "0.0"}`
                 : place.category,
               hasReviews,
             };
@@ -311,14 +256,13 @@ const Index = () => {
 
           const searchBody = await searchResponse.text();
 
-          console.log("GET /users/search status:", searchResponse.status);
-          console.log("GET /users/search body:", searchBody);
-
           if (searchResponse.ok) {
             return JSON.parse(searchBody) as UserSummary[];
           }
 
-          console.log("Falling back to GET /users local filtering");
+          console.log(
+            `GET /users/search failed (${searchResponse.status}); falling back to GET /users`,
+          );
 
           const fallbackResponse = await fetch(`${API_BASE_URL}/users`, {
             headers: authHeaders,
@@ -459,9 +403,9 @@ const Index = () => {
             onPress={refreshLocation}
             activeOpacity={0.7}
           >
-            <Feather name="map-pin" size={14} color="#666" />
+            <Feather name="map-pin" size={14} color={theme.colors.textMuted} />
             <Text style={styles.locationLabel} numberOfLines={1}>
-              {loadingLocation ? "Locating..." : location}
+              {loadingLocation ? "Locating..." : locationLabel}
             </Text>
           </TouchableOpacity>
         </View>
@@ -518,7 +462,11 @@ const Index = () => {
               onPress={() => router.push("/social")}
               activeOpacity={0.7}
             >
-              <Feather name="chevron-right" size={24} color="#111" />
+              <Feather
+                name="chevron-right"
+                size={24}
+                color={theme.colors.text}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -550,7 +498,11 @@ const Index = () => {
               activeOpacity={0.8}
             >
               <View style={styles.emptyIcon}>
-                <Feather name="users" size={20} color="#777" />
+                <Feather
+                  name="users"
+                  size={20}
+                  color={theme.colors.textMuted}
+                />
               </View>
 
               <View style={styles.emptyTextGroup}>
@@ -560,7 +512,11 @@ const Index = () => {
                 </Text>
               </View>
 
-              <Feather name="chevron-right" size={18} color="#999" />
+              <Feather
+                name="chevron-right"
+                size={18}
+                color={theme.colors.textSubtle}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -572,7 +528,7 @@ const Index = () => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.surface,
   },
 
   container: {
@@ -588,7 +544,7 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 27,
     fontWeight: "900",
-    color: "#111",
+    color: theme.colors.text,
   },
 
   locationSelector: {
@@ -603,7 +559,7 @@ const styles = StyleSheet.create({
     maxWidth: 180,
     fontSize: 14,
     fontWeight: "700",
-    color: "#666",
+    color: theme.colors.textMuted,
   },
 
   searchArea: {
@@ -627,7 +583,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "900",
-    color: "#111",
+    color: theme.colors.text,
   },
 
   sectionArrowButton: {
@@ -647,14 +603,14 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: theme.colors.surfaceMuted,
   },
 
   emptyIcon: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -666,14 +622,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#111",
+    color: theme.colors.text,
   },
 
   emptyText: {
     marginTop: 3,
     fontSize: 13,
     lineHeight: 18,
-    color: "#777",
+    color: theme.colors.textMuted,
   },
 });
 

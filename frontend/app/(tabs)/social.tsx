@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import Feather from "@expo/vector-icons/Feather";
 import { router, useFocusEffect } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
+import { Ionicons } from "@expo/vector-icons";
 
 type FeedReview = {
   id: string;
@@ -48,24 +51,15 @@ const Social = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(
-        `${API_BASE_URL}/users/${user!.id}/feed`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      const response = await fetch(`${API_BASE_URL}/users/${user!.id}/feed`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!response.ok) {
         throw new Error(`Feed request failed with status ${response.status}`);
       }
 
       const data: FeedReview[] = await response.json();
-      console.log("feed data:", data);
-      console.log(
-        "feed photo urls:",
-        data.map((item) => ({
-          id: item.id,
-          photoUrl: item.photoUrl,
-        })),
-      );
 
       setFeed(data);
     } catch (err) {
@@ -112,7 +106,7 @@ const Social = () => {
             const hasImage = Boolean(review.photoUrl);
 
             return (
-              <View key={review.id} style={styles.card}>
+              <Card key={review.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.userRow}>
                     {review.profilePic ? (
@@ -147,19 +141,27 @@ const Social = () => {
                   </View>
 
                   <TouchableOpacity>
-                    <Feather name="bookmark" size={22} color="#222" />
+                    <Feather
+                      name="bookmark"
+                      size={22}
+                      color={theme.colors.textMuted}
+                    />
                   </TouchableOpacity>
                 </View>
 
                 <View style={styles.metaRow}>
                   <View style={styles.ratingRow}>
-                    <Feather name="star" size={14} color="#f59e0b" />
+                    <Ionicons
+                      name="star"
+                      size={14}
+                      color={theme.colors.accent}
+                    />
                     <Text style={styles.ratingText}>{review.rating}</Text>
                   </View>
 
                   {review.createdAt ? (
                     <Text style={styles.metaText}>
-                      on {formatFeedDate(review.createdAt)}
+                      {formatFeedDate(review.createdAt)}
                     </Text>
                   ) : null}
                 </View>
@@ -173,7 +175,7 @@ const Social = () => {
                     resizeMode="cover"
                   />
                 ) : null}
-              </View>
+              </Card>
             );
           })}
         </ScrollView>
@@ -187,26 +189,27 @@ export default Social;
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.background,
   },
 
   header: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.background,
   },
 
   title: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#111",
+    fontWeight: "900",
+    color: theme.colors.text,
     textAlign: "center",
   },
 
   container: {
     paddingHorizontal: 20,
     paddingBottom: 32,
+    gap: 16,
   },
 
   stateContainer: {
@@ -218,20 +221,26 @@ const styles = StyleSheet.create({
 
   stateText: {
     fontSize: 15,
-    color: "#666",
+    color: theme.colors.textMuted,
     textAlign: "center",
   },
 
   errorText: {
     fontSize: 15,
     textAlign: "center",
+    color: theme.colors.danger,
   },
 
   card: {
-    backgroundColor: "#f7f7f7",
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 14,
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: "rgba(17, 24, 39, 0.055)",
+    shadowColor: theme.colors.shadow,
+    shadowOpacity: 0.045,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
 
   cardHeader: {
@@ -265,24 +274,24 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#d9d9d9",
+    backgroundColor: theme.colors.surfaceMuted,
   },
 
   username: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#111",
+    fontWeight: "800",
+    color: theme.colors.text,
   },
 
   actionText: {
     fontSize: 12,
-    color: "#7a7a7a",
+    color: theme.colors.textMuted,
   },
 
   placeLink: {
     fontSize: 12,
-    color: "#111",
-    fontWeight: "500",
+    color: theme.colors.text,
+    fontWeight: "600",
   },
 
   metaRow: {
@@ -299,27 +308,27 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#444",
+    color: theme.colors.accent,
     marginLeft: 4,
   },
 
   metaText: {
     fontSize: 13,
-    color: "#666",
+    color: theme.colors.textMuted,
     marginLeft: 8,
   },
 
   reviewText: {
     fontSize: 14,
     lineHeight: 20,
-    color: "#333",
+    color: theme.colors.text,
     marginBottom: 12,
   },
 
   feedImage: {
     width: "100%",
     height: 220,
-    borderRadius: 18,
-    backgroundColor: "#ececec",
+    borderRadius: theme.radius.lg,
+    backgroundColor: theme.colors.surfaceMuted,
   },
 });

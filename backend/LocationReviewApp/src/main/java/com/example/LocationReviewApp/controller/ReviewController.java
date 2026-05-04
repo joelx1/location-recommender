@@ -62,6 +62,7 @@ public class ReviewController {
 
     // POST /reviews - creates a new review
     // The author is derived from the JWT — the body must not be trusted for identity.
+    // Only one review per user per location is allowed — returns 409 if already reviewed.
     @PostMapping
     public Review createReview(@RequestBody Review review, @AuthenticationPrincipal Jwt jwt) {
         // Look up the real user from the JWT and set them as the author — ignore any user
@@ -70,6 +71,18 @@ public class ReviewController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Authenticated user not found — call /auth/me first"));
         review.setUser(author);
+
+        // Check for duplicate review — one review per user per location
+        boolean alreadyReviewed = reviewRepository
+                .findByUserId(author.getId())
+                .stream()
+                .anyMatch(r -> r.getLocation().getId().equals(review.getLocation().getId()));
+
+        if (alreadyReviewed) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "You have already reviewed this location");
+        }
+
         return reviewRepository.save(review);
     }
 
@@ -95,8 +108,8 @@ public class ReviewController {
     // Only the author of the review can upload a photo to it.
     @PostMapping("/{id}/photo")
     public ResponseEntity<Map<String, String>> uploadReviewPhoto(@PathVariable UUID id,
-            @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal Jwt jwt)
+                                                                 @RequestParam("file") MultipartFile file,
+                                                                 @AuthenticationPrincipal Jwt jwt)
     {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));

@@ -8,6 +8,15 @@ import {
   type ViewStyle,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
+import { theme } from "@/theme";
+
+const searchColors = {
+  background: "#F3F4F6",
+  floatingBackground: "#FFFFFF",
+  icon: "#6B7280",
+  placeholder: "#9CA3AF",
+  text: "#111827",
+};
 
 type Props = {
   value: string;
@@ -40,12 +49,12 @@ const SearchBar = ({
         style,
       ]}
     >
-      <Feather name="search" size={18} color="#666" />
+      <Feather name="search" size={18} color={searchColors.icon} />
 
       <TextInput
         style={styles.searchInput}
         placeholder={placeholder}
-        placeholderTextColor="#888"
+        placeholderTextColor={searchColors.placeholder}
         value={value}
         onChangeText={onChangeText}
         onFocus={onFocus}
@@ -56,7 +65,7 @@ const SearchBar = ({
 
       {value.trim().length > 0 && onClear ? (
         <TouchableOpacity onPress={onClear} style={styles.cancelButton}>
-          <Feather name="x" size={18} color="#666" />
+          <Feather name="x" size={18} color={searchColors.icon} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -69,15 +78,15 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F2F2F2",
+    backgroundColor: searchColors.background,
     height: 52,
     borderRadius: 16,
     paddingHorizontal: 14,
   },
 
   floatingSearchBar: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
+    backgroundColor: searchColors.floatingBackground,
+    shadowColor: theme.colors.shadow,
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -88,7 +97,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
     fontSize: 15,
-    color: "#111",
+    color: searchColors.text,
   },
 
   cancelButton: {

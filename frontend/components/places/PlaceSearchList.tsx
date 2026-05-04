@@ -1,7 +1,9 @@
 import React from "react";
-import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
+import { Text, View, StyleSheet } from "react-native";
 import type { PlaceResult } from "@/types/place";
 import SearchBar from "@/components/search/SearchBar";
+import Card from "@/components/ui/Card";
+import { theme } from "@/theme";
 
 // Reusable place search UI for screens that show a search box and selectable place results.
 
@@ -45,7 +47,7 @@ const PlaceSearchList = ({
           <Text style={styles.helperText}>{emptyText}</Text>
         ) : (
           results.map((place) => (
-            <TouchableOpacity
+            <Card
               key={`${place.source}-${place.id}`}
               style={styles.suggestionItem}
               onPress={() => onSelectPlace(place)}
@@ -54,7 +56,7 @@ const PlaceSearchList = ({
               <Text style={styles.suggestionMeta}>
                 {place.category} · {place.address}
               </Text>
-            </TouchableOpacity>
+            </Card>
           ))
         )}
       </View>
@@ -73,30 +75,28 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 14,
-    color: "#666",
+    color: theme.colors.textMuted,
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
   errorText: {
     fontSize: 14,
-    color: "#c62828",
+    color: theme.colors.danger,
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
   suggestionItem: {
-    backgroundColor: "#f5f5f5",
-    borderRadius: 16,
     padding: 14,
   },
   suggestionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#111",
+    color: theme.colors.text,
     marginBottom: 4,
   },
   suggestionMeta: {
     fontSize: 13,
-    color: "#666",
+    color: theme.colors.textMuted,
     lineHeight: 18,
   },
 });

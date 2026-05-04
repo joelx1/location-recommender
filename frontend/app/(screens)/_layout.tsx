@@ -6,6 +6,8 @@ export default function ScreensLayout() {
       <Stack.Screen name="editProfile" />
       <Stack.Screen name="placeDetails" />
       <Stack.Screen name="addReview" />
+      <Stack.Screen name="friendList" />
+      <Stack.Screen name="friendProfile" />
     </Stack>
   );
 }

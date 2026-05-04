@@ -26,17 +26,16 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.LocationReviewApp.dto.FeedItem;
 import com.example.LocationReviewApp.dto.UserSummary;
+import com.example.LocationReviewApp.model.DeviceToken;
 import com.example.LocationReviewApp.model.Friendship;
 import com.example.LocationReviewApp.model.FriendshipStatus;
 import com.example.LocationReviewApp.model.Review;
 import com.example.LocationReviewApp.model.User;
+import com.example.LocationReviewApp.repository.DeviceTokenRepository;
 import com.example.LocationReviewApp.repository.FriendshipRepository;
 import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
 import com.example.LocationReviewApp.service.AzureBlobService;
-import com.example.LocationReviewApp.model.DeviceToken;
-import com.example.LocationReviewApp.repository.DeviceTokenRepository;
-import com.example.LocationReviewApp.service.UserService;
 
 @RestController
 @RequestMapping("/users")
@@ -68,7 +67,7 @@ public class UserController {
 
     // GET /users/search?q=sometext
     // Case-insensitive username search — used by the Home screen people-search.
-    // Returns up to 20 results as slim UserSummaryDto objects (id, username, profilePic, bio).
+    // Returns up to 20 results as slim UserSummary objects (id, username, profilePic, bio).
     // Excludes the calling user so they don't appear in their own results.
     // Returns an empty list for blank queries rather than returning all users.
     //
@@ -140,11 +139,15 @@ public class UserController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
 
+<<<<<<< HEAD
         User requester = userService.findFromJwt(jwt)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Authenticated user not found — call /auth/me first"));
 
         if (!requester.getId().equals(user.getId())) {
+=======
+        if (!jwt.getSubject().equals(user.getAzureOid())) {
+>>>>>>> origin/main
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You can only delete your own account");
         }
@@ -174,7 +177,7 @@ public class UserController {
 
     // GET /users/{id}/feed — returns reviews posted by the user's friends, newest first.
     //
-    // Returns List<FeedItemDto> — a flat shape with all fields the feed card needs.
+    // Returns List<FeedItem> — a flat shape with all fields the feed card needs.
     // This is a breaking change from the previous List<Review> response which returned
     // deeply nested user and location objects.
     //

@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import React from "react";
 import Feather from "@expo/vector-icons/Feather";
+import { theme } from "@/theme";
 
 type ProfileHeaderProps = {
   username: string;
@@ -48,7 +49,7 @@ const ProfileHeader = ({
                   style={styles.editButton}
                   onPress={onPressEdit}
                 >
-                  <Feather name="edit" size={18} color="black" />
+                  <Feather name="edit" size={18} color={theme.colors.text} />
                 </TouchableOpacity>
               )}
             </View>
@@ -80,7 +81,7 @@ const ProfileHeader = ({
 
         {showActions && (
           <TouchableOpacity onPress={onPressLogout}>
-            <Feather name="log-out" size={22} color="black" />
+            <Feather name="log-out" size={22} color={theme.colors.text} />
           </TouchableOpacity>
         )}
       </View>
@@ -105,13 +106,14 @@ const styles = StyleSheet.create({
 
   username: {
     fontSize: 24,
-    fontWeight: "700",
+    fontWeight: "900",
+    color: theme.colors.text,
   },
 
   bio: {
     fontSize: 14,
     marginBottom: 12,
-    color: "#666",
+    color: theme.colors.textMuted,
   },
 
   statsRow: {
@@ -121,6 +123,7 @@ const styles = StyleSheet.create({
 
   statText: {
     fontSize: 14,
+    color: theme.colors.text,
   },
 
   profileTopRow: {
@@ -141,7 +144,7 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 36,
     marginRight: 16,
-    backgroundColor: "#ddd",
+    backgroundColor: theme.colors.surfaceMuted,
   },
 
   userInfo: {

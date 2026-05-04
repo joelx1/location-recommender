@@ -5,12 +5,20 @@ import Feather from "@expo/vector-icons/Feather";
 import { router, useLocalSearchParams } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import PlaceCategoryImage from "@/components/places/PlaceCategoryImage";
+import { theme } from "@/theme";
+import { Ionicons } from "@expo/vector-icons";
 
-type BackendLocation = {
+type BackendLocationSummary = {
   id: string;
   name: string;
   category: string;
   address: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  reviewCount?: number | null;
+  averageRating?: number | null;
+  bayesianScore?: number | null;
 };
 
 type BackendReview = {
@@ -18,9 +26,11 @@ type BackendReview = {
   rating: number;
   body: string | null;
   photoUrl?: string | null;
+  createdAt?: string;
   user?: {
     id?: string;
     username?: string;
+    profilePic?: string | null;
   };
 };
 
@@ -35,27 +45,38 @@ type PlaceDetailsData = {
   reviews: {
     id: string;
     user: string;
+    profilePic?: string | null;
     rating: string;
     body: string;
+    createdAt: string;
     photoUrl?: string | null;
   }[];
 };
 
 type FeedReview = {
   id: string;
+  username?: string;
+  locationId?: string;
   user?: {
     username?: string;
   };
   location?: {
-    id: string;
+    id?: string;
   };
+};
+
+const formatReviewDate = (dateString?: string) => {
+  if (!dateString) return "";
+
+  return new Date(dateString).toLocaleDateString("en-IE", {
+    day: "numeric",
+    month: "short",
+  });
 };
 
 const PlaceDetails = () => {
   const { token, user } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
-
-  console.log("placeDetails id:", id);
 
   const [location, setLocation] = useState<PlaceDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,8 +84,8 @@ const PlaceDetails = () => {
 
   useEffect(() => {
     const fetchPlaceDetails = async () => {
-      if (!id) {
-        setError("Missing location id");
+      if (!id || !token || !user?.id) {
+        setError("Missing location or user data");
         setLoading(false);
         return;
       }
@@ -76,11 +97,13 @@ const PlaceDetails = () => {
         const authHeaders = { Authorization: `Bearer ${token}` };
         const [locationResponse, reviewsResponse, feedResponse] =
           await Promise.all([
-            fetch(`${API_BASE_URL}/locations/${id}`, { headers: authHeaders }),
+            fetch(`${API_BASE_URL}/locations/${id}/summary`, {
+              headers: authHeaders,
+            }),
             fetch(`${API_BASE_URL}/locations/${id}/reviews`, {
               headers: authHeaders,
             }),
-            fetch(`${API_BASE_URL}/users/${user!.id}/feed`, {
+            fetch(`${API_BASE_URL}/users/${user.id}/feed`, {
               headers: authHeaders,
             }),
           ]);
@@ -103,29 +126,32 @@ const PlaceDetails = () => {
           );
         }
 
-        const locationData: BackendLocation = await locationResponse.json();
+        const locationData: BackendLocationSummary =
+          await locationResponse.json();
         const reviewsData: BackendReview[] = await reviewsResponse.json();
         const feedData: FeedReview[] = await feedResponse.json();
 
         const friendReviewsForPlace = feedData.filter(
-          (review) => review.location?.id === id,
+          (review) => (review.locationId || review.location?.id) === id,
         );
         const friendReviewCount = friendReviewsForPlace.length;
 
         const friendReviewerNames = Array.from(
           new Set(
             friendReviewsForPlace
-              .map((review) => review.user?.username)
+              .map((review) => review.username || review.user?.username)
               .filter((name): name is string => Boolean(name)),
           ),
         );
 
-        const reviewCount = reviewsData.length;
-        const averageRating =
-          reviewCount > 0
-            ? reviewsData.reduce((sum, review) => sum + review.rating, 0) /
-              reviewCount
-            : 0;
+        const reviewCount = locationData.reviewCount ?? reviewsData.length;
+        const averageRating = locationData.averageRating ?? 0;
+        const sortedReviews = [...reviewsData].sort((a, b) => {
+          const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+          return timeB - timeA;
+        });
 
         setLocation({
           title: locationData.name,
@@ -135,11 +161,13 @@ const PlaceDetails = () => {
           address: locationData.address ?? "No address provided",
           friendReviewCount,
           friendReviewerNames,
-          reviews: reviewsData.map((review) => ({
+          reviews: sortedReviews.map((review) => ({
             id: review.id,
             user: review.user?.username ?? "Anonymous",
-            rating: `${review.rating}/5`,
+            profilePic: review.user?.profilePic ?? null,
+            rating: `${review.rating}`,
             body: review.body ?? "",
+            createdAt: formatReviewDate(review.createdAt),
             photoUrl: review.photoUrl ?? null,
           })),
         });
@@ -153,7 +181,7 @@ const PlaceDetails = () => {
     };
 
     fetchPlaceDetails();
-  }, [id]);
+  }, [id, token, user?.id]);
 
   if (loading) {
     return (
@@ -166,7 +194,7 @@ const PlaceDetails = () => {
   if (error) {
     return (
       <ScreenWrapper style={styles.container}>
-        <Text>{error}</Text>
+        <Text style={styles.errorText}>{error}</Text>
       </ScreenWrapper>
     );
   }
@@ -174,7 +202,7 @@ const PlaceDetails = () => {
   if (!location) {
     return (
       <ScreenWrapper style={styles.container}>
-        <Text>No location data found.</Text>
+        <Text style={styles.emptyText}>No location data found.</Text>
       </ScreenWrapper>
     );
   }
@@ -183,33 +211,40 @@ const PlaceDetails = () => {
     <ScreenWrapper scrollable style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="chevron-left" size={24} color="#111" />
+          <Feather name="chevron-left" size={24} color={theme.colors.text} />
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.iconButton}>
-            <Feather name="share" size={20} color="#111" />
+            <Feather name="share" size={20} color={theme.colors.text} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.iconButton}>
-            <Feather name="bookmark" size={20} color="#111" />
+            <Feather name="bookmark" size={20} color={theme.colors.text} />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.iconButton}>
-            <Feather name="more-horizontal" size={20} color="#111" />
+            <Feather
+              name="more-horizontal"
+              size={20}
+              color={theme.colors.text}
+            />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.imagePlaceholder}>
-        <Feather name="image" size={32} color="#444" />
-      </View>
+      <PlaceCategoryImage
+        category={location.category}
+        style={styles.heroImage}
+      />
 
       <View style={styles.content}>
         <Text style={styles.title}>{location.title}</Text>
         <View style={styles.ratingRow}>
-          <Feather name="star" size={18} color="#111" />
-          <Text style={styles.ratingText}>{location.rating}</Text>
+          <View style={styles.placeRatingGroup}>
+            <Ionicons name="star" size={18} color={theme.colors.accent} />
+            <Text style={styles.ratingText}>{location.rating}</Text>
+          </View>
           <Text style={styles.reviewCount}>{location.reviewCount} reviews</Text>
         </View>
         {location.friendReviewerNames.length > 0 ? (
@@ -237,25 +272,70 @@ const PlaceDetails = () => {
 
         <Text style={styles.reviewSection}>Reviews</Text>
         <View style={styles.reviewsCard}>
-          {location.reviews.map((review) => (
-            <View key={review.id} style={styles.reviewItem}>
-              <Text style={styles.reviewUser}>
-                {review.user} · {review.rating}
-              </Text>
+          {location.reviews.length > 0 ? (
+            location.reviews.map((review, index) => (
+              <View
+                key={review.id}
+                style={[
+                  styles.reviewItem,
+                  index === location.reviews.length - 1 &&
+                    styles.lastReviewItem,
+                ]}
+              >
+                <View style={styles.reviewHeader}>
+                  <View style={styles.reviewAvatar}>
+                    <Image
+                      source={
+                        review.profilePic
+                          ? { uri: review.profilePic }
+                          : require("@/assets/images/default-avatar.png")
+                      }
+                      style={styles.fullImg}
+                    />
+                  </View>
 
-              {review.body ? (
-                <Text style={styles.reviewBody}>{review.body}</Text>
-              ) : null}
+                  <View style={styles.reviewAuthorText}>
+                    <Text style={styles.reviewUser} numberOfLines={1}>
+                      {review.user}
+                    </Text>
 
-              {review.photoUrl ? (
-                <Image
-                  source={{ uri: review.photoUrl }}
-                  style={styles.reviewImage}
-                  resizeMode="cover"
-                />
-              ) : null}
-            </View>
-          ))}
+                    <View style={styles.reviewMeta}>
+                      <View style={styles.reviewRating}>
+                        <Ionicons
+                          name="star"
+                          size={14}
+                          color={theme.colors.accent}
+                        />
+                        <Text style={styles.reviewRatingText}>
+                          {review.rating}
+                        </Text>
+                      </View>
+
+                      {review.createdAt ? (
+                        <Text style={styles.reviewDate}>
+                          {review.createdAt}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                </View>
+
+                {review.body ? (
+                  <Text style={styles.reviewBody}>{review.body}</Text>
+                ) : null}
+
+                {review.photoUrl ? (
+                  <Image
+                    source={{ uri: review.photoUrl }}
+                    style={styles.reviewImage}
+                    resizeMode="cover"
+                  />
+                ) : null}
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyReviewText}>No reviews yet.</Text>
+          )}
         </View>
       </View>
     </ScreenWrapper>
@@ -270,6 +350,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 24,
     paddingHorizontal: 20,
+    backgroundColor: theme.colors.surface,
   },
 
   header: {
@@ -293,144 +374,195 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    gap: 14,
+    gap: 13,
   },
 
   title: {
-    fontSize: 18,
-    fontWeight: "500",
-    color: "#111",
+    fontSize: 20,
+    fontWeight: "900",
+    color: theme.colors.text,
   },
 
-  imagePlaceholder: {
+  heroImage: {
+    width: "100%",
     height: 220,
     borderRadius: 24,
-    backgroundColor: "#ececec",
     marginBottom: 24,
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: theme.colors.surfaceMuted,
+    overflow: "hidden",
   },
 
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
+  },
+
+  placeRatingGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
   },
 
   ratingText: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#111",
+    color: theme.colors.accent,
   },
 
   reviewCount: {
     fontSize: 16,
-    color: "#9b9bb0",
+    color: theme.colors.textSubtle,
   },
 
   friendText: {
     fontSize: 12,
-    color: "#a16207",
+    color: "#B85F05",
     fontWeight: "600",
   },
 
   infoCard: {
-    borderRadius: 24,
-    backgroundColor: "#ececec",
-    marginTop: 4,
-    padding: 20,
-    gap: 16,
+    borderRadius: theme.radius.lg,
+    backgroundColor: "rgba(244, 245, 243, 0.72)",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    gap: 14,
   },
 
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 16,
   },
 
   infoLabel: {
     fontSize: 14,
-    color: "#8b8b8b",
+    color: theme.colors.textSubtle,
   },
 
   infoValue: {
+    flex: 1,
     fontSize: 14,
-    color: "#111",
+    color: theme.colors.text,
     fontWeight: "500",
-    maxWidth: "80%",
     textAlign: "right",
   },
 
   reviewSection: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#111",
+    fontWeight: "900",
+    color: theme.colors.text,
     marginTop: 8,
   },
 
   reviewsCard: {
-    borderRadius: 24,
-    backgroundColor: "#ececec",
-    paddingTop: 10,
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    gap: 12,
+    borderRadius: theme.radius.lg,
+    backgroundColor: "rgba(244, 245, 243, 0.68)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
 
   reviewItem: {
-    borderRadius: 16,
-    padding: 10,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(17, 24, 39, 0.055)",
+  },
+
+  fullImg: {
+    width: "100%",
+    height: "100%",
+  },
+
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+    marginBottom: 9,
+  },
+
+  reviewAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    overflow: "hidden",
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  reviewAuthorText: {
+    flex: 1,
+    minWidth: 0,
   },
 
   reviewUser: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111",
-    marginBottom: 6,
+    fontSize: 15,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginBottom: 2,
   },
 
-  reviewBody: {
-    fontSize: 14,
-    color: "#444",
-    lineHeight: 20,
-  },
-
-  friendRow: {
+  reviewMeta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
 
-  friendAvatars: {
+  reviewRating: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
   },
 
-  avatarCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#d8d8d8",
-    borderWidth: 2,
-    borderColor: "#fff",
+  reviewRatingText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.accent,
   },
 
-  avatarOverlap: {
-    marginLeft: -8,
+  reviewDate: {
+    fontSize: 12,
+    color: theme.colors.textSubtle,
+  },
+
+  reviewBody: {
+    fontSize: 14,
+    color: theme.colors.textMuted,
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+
+  emptyReviewText: {
+    padding: 10,
+    fontSize: 14,
+    color: theme.colors.textMuted,
   },
 
   friendBadge: {
     alignSelf: "flex-start",
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: "#fef3c7",
+    backgroundColor: "rgba(255, 243, 214, 0.78)",
   },
+
   reviewImage: {
     width: "100%",
-    height: 180,
-    borderRadius: 16,
-    marginTop: 10,
-    backgroundColor: "#ddd",
+    height: 170,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.border,
+  },
+
+  errorText: {
+    color: theme.colors.danger,
+  },
+
+  emptyText: {
+    color: theme.colors.textMuted,
+  },
+
+  lastReviewItem: {
+    borderBottomWidth: 0,
   },
 });

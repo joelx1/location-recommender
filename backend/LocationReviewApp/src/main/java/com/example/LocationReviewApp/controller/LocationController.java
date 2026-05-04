@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -70,10 +72,13 @@ public class LocationController {
     }
 
     // GET /locations/{id}/social-summary?userId={currentUserId}
-    // Returns how many of the current user's accepted friends have reviewed this location.
-    // Used by the Place Details screen to show e.g. "3 of your friends have been here".
+    // Returns how many of the current user's accepted friends have reviewed this location,
+    // plus their usernames — used by the Place Details screen.
+    //
+    // Response shape:
+    //   { "friendsReviewedCount": 2, "friendReviewerNames": ["Alice", "Bob"] }
     @GetMapping("/{id}/social-summary")
-    public Map<String, Long> getSocialSummary(
+    public Map<String, Object> getSocialSummary(
             @PathVariable UUID id,
             @RequestParam UUID userId) {
 
@@ -84,9 +89,17 @@ public class LocationController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
 
-        long count = reviewRepository.countFriendsReviewedLocation(
+        List<User> friends = reviewRepository.findFriendsWhoReviewedLocation(
                 id, userId, FriendshipStatus.ACCEPTED);
-        return Map.of("friendsReviewedCount", count);
+
+        List<String> names = friends.stream()
+                .map(User::getUsername)
+                .collect(Collectors.toList());
+
+        return Map.of(
+                "friendsReviewedCount", (long) friends.size(),
+                "friendReviewerNames", names
+        );
     }
 
     // POST /locations — creates a new location from the request body.
@@ -101,6 +114,7 @@ public class LocationController {
     // If googlePlacesId is absent (manual entry), the check is skipped and the
     // location is created normally.
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Location createLocation(@RequestBody LocationRequest request,
                                    @AuthenticationPrincipal Jwt jwt) {
 
@@ -137,7 +151,8 @@ public class LocationController {
     }
 
     // DELETE /locations/{id} — deletes a location by its UUID
-// Only the user who created the location can delete it (enforced via JWT)
+    // Only the user who created the location can delete it (enforced via JWT).
+    // Locations created before auth was added have no createdBy — treated as unowned.
     @DeleteMapping("/{id}")
     public void deleteLocation(@PathVariable UUID id,
                                @AuthenticationPrincipal Jwt jwt) {
@@ -145,12 +160,17 @@ public class LocationController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Location not found"));
 
+        if (location.getCreatedBy() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You can only delete your own locations");
+        }
+
         User requester = userRepository.findByAzureOid(jwt.getSubject())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Authenticated user not found — call /auth/me first"));
 
-        if (!location.getCreatedBy().getId().equals(requester.getId())) {
+        if (!requester.getId().equals(location.getCreatedBy().getId())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You can only delete your own locations");
         }

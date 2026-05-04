@@ -1,15 +1,8 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-} from "react-native";
-import React, { useRef, useState, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 // import ScreenWrapper from "@/components/ScreenWrapper";
 import MapView, { Marker } from "react-native-maps";
-import Feather from "@expo/vector-icons/Feather";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
 import type { PlaceResult } from "@/types/place";
 import { useAuth } from "@/context/AuthContext";
@@ -18,81 +11,106 @@ import LocationDetailCard from "@/components/places/LocationDetailCard";
 import type { MapLocation } from "@/components/places/LocationDetailCard";
 import { useBackendPlaces } from "@/hooks/useBackendPlaces";
 import SearchBar from "@/components/search/SearchBar";
+import { useCurrentLocation } from "@/hooks/useCurrentLocation";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  isSamePlaceByNameAndAddress,
+  normalizePlaceText,
+} from "@/services/placeMapper";
+import { theme } from "@/theme";
 
 type BackendReview = {
   id: string;
   rating: number;
   body: string | null;
+  createdAt?: string;
   user?: {
     username?: string;
+    profilePic?: string | null;
   };
 };
 
 type FeedReview = {
   id: string;
+  locationId?: string;
   location?: {
-    id: string;
+    id?: string;
   };
-};
-
-// Temporary
-const INITIAL_REGION = {
-  latitude: 53.3498,
-  longitude: -6.2603,
-  latitudeDelta: 0.02,
-  longitudeDelta: 0.02,
 };
 
 const Search = () => {
   const { token, user } = useAuth();
   const mapRef = useRef<MapView | null>(null);
+  const { coords } = useCurrentLocation();
+  const insets = useSafeAreaInsets();
+
   const [searchText, setSearchText] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(
     null,
   );
+  const [markerResetKey, setMarkerResetKey] = useState(0);
+
   const [friendReviewCountByLocation, setFriendReviewCountByLocation] =
     useState<Map<string, number>>(new Map());
   const { googleResults, loadingGoogle } = useGooglePlaceSearch(searchText, {
     enabled: searchText !== selectedLocation?.title,
   });
 
-  const { places, error } = useBackendPlaces(token);
+  const { places, error, refreshPlaces } = useBackendPlaces(token);
+
+  const fetchFriendFeed = useCallback(async () => {
+    if (!token || !user?.id) {
+      setFriendReviewCountByLocation(new Map());
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${user.id}/feed`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Feed request failed with status ${response.status}`);
+      }
+
+      const data: FeedReview[] = await response.json();
+      const counts = new Map<string, number>();
+
+      data.forEach((item) => {
+        const locationId = item.locationId || item.location?.id;
+        if (!locationId) return;
+
+        counts.set(locationId, (counts.get(locationId) ?? 0) + 1);
+      });
+
+      setFriendReviewCountByLocation(counts);
+    } catch (err) {
+      console.log("fetch friend feed error:", err);
+      setFriendReviewCountByLocation(new Map());
+    }
+  }, [token, user?.id]);
+
+  const mapRegion = {
+    latitude: coords.latitude,
+    longitude: coords.longitude,
+    latitudeDelta: 0.02,
+    longitudeDelta: 0.02,
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setSelectedLocation(null);
+      setSearchText("");
+      setMarkerResetKey((key) => key + 1);
+      refreshPlaces();
+      fetchFriendFeed();
+      mapRef.current?.animateToRegion(mapRegion);
+    }, [refreshPlaces, fetchFriendFeed, coords.latitude, coords.longitude]),
+  );
 
   useEffect(() => {
-    const fetchFriendFeed = async () => {
-      if (!token || !user?.id) {
-        setFriendReviewCountByLocation(new Map());
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/users/${user.id}/feed`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Feed request failed with status ${response.status}`);
-        }
-
-        const data: FeedReview[] = await response.json();
-        const counts = new Map<string, number>();
-
-        data.forEach((item) => {
-          const locationId = item.location?.id;
-          if (!locationId) return;
-
-          counts.set(locationId, (counts.get(locationId) ?? 0) + 1);
-        });
-
-        setFriendReviewCountByLocation(counts);
-      } catch (err) {
-        console.log("fetch friend feed error:", err);
-        setFriendReviewCountByLocation(new Map());
-      }
-    };
-
-    fetchFriendFeed();
-  }, [token, user?.id]);
+    mapRef.current?.animateToRegion(mapRegion);
+  }, [coords.latitude, coords.longitude]);
 
   const locations: MapLocation[] = places
     .filter((place) => place.latitude != null && place.longitude != null)
@@ -107,14 +125,6 @@ const Search = () => {
       friendReviewCount: friendReviewCountByLocation.get(place.id) ?? 0,
     }));
 
-  const normalizePlaceText = (value: string) =>
-    value
-      .trim()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, " ");
-
   const searchKeyword = normalizePlaceText(searchText);
 
   const filteredLocations = locations.filter((location) =>
@@ -123,17 +133,12 @@ const Search = () => {
 
   const googleResultsWithoutExistingLocations = googleResults.filter(
     (googlePlace) =>
-      !locations.some((location) => {
-        const sameName =
-          normalizePlaceText(location.title) ===
-          normalizePlaceText(googlePlace.name);
-
-        const sameAddress =
-          normalizePlaceText(location.address) ===
-          normalizePlaceText(googlePlace.address);
-
-        return sameName && sameAddress;
-      }),
+      !locations.some((location) =>
+        isSamePlaceByNameAndAddress(
+          { name: location.title, address: location.address },
+          googlePlace,
+        ),
+      ),
   );
 
   const showSuggestions =
@@ -144,11 +149,6 @@ const Search = () => {
       loadingGoogle);
 
   const handleSelectLocation = async (location: MapLocation) => {
-    setSelectedLocation({
-      ...location,
-      reviews: [],
-    });
-
     mapRef.current?.animateToRegion({
       latitude: location.latitude,
       longitude: location.longitude,
@@ -172,19 +172,32 @@ const Search = () => {
 
       const reviewsData: BackendReview[] = await response.json();
 
+      const sortedReviews = [...reviewsData].sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+        return timeB - timeA;
+      });
+
       const enrichedLocation = {
         ...location,
-        reviews: reviewsData.map((review) => ({
+        reviews: sortedReviews.slice(0, 2).map((review) => ({
           id: review.id,
           user: review.user?.username ?? "Anonymous",
           rating: review.rating,
           body: review.body ?? "",
+          profilePic: review.user?.profilePic ?? null,
         })),
       };
 
       setSelectedLocation(enrichedLocation);
     } catch (err) {
       console.log("reviews fetch error:", err);
+
+      setSelectedLocation({
+        ...location,
+        reviews: [],
+      });
     }
   };
 
@@ -208,34 +221,33 @@ const Search = () => {
   const handleClearSelection = () => {
     setSelectedLocation(null);
     setSearchText("");
-    mapRef.current?.animateToRegion(INITIAL_REGION);
+    setMarkerResetKey((key) => key + 1);
+    mapRef.current?.animateToRegion(mapRegion);
   };
 
   return (
     // <ScreenWrapper>
 
     <View style={styles.container}>
-      {error ? (
-        <Text style={{ color: "red", padding: 16 }}>{error}</Text>
-      ) : null}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <MapView
         style={StyleSheet.absoluteFill}
-        initialRegion={INITIAL_REGION}
+        initialRegion={mapRegion}
         showsUserLocation
         showsMyLocationButton
         ref={mapRef}
       >
         {locations.map((location, id) => (
           <Marker
-            key={location.id}
+            key={`${location.id}-${markerResetKey}`}
             coordinate={{
               latitude: location.latitude,
               longitude: location.longitude,
             }}
             pinColor={
               location.friendReviewCount && location.friendReviewCount > 0
-                ? "#f59e0b"
+                ? theme.colors.accent
                 : undefined
             }
             onPress={() => handleSelectLocation(location)}
@@ -243,7 +255,7 @@ const Search = () => {
         ))}
       </MapView>
 
-      <View style={styles.searchWrapper}>
+      <View style={[styles.searchWrapper, { top: insets.top + 12 }]}>
         <SearchBar
           value={searchText}
           onChangeText={setSearchText}
@@ -300,6 +312,7 @@ const Search = () => {
       {selectedLocation && (
         <LocationDetailCard
           location={selectedLocation}
+          bottomOffset={16}
           onClose={handleClearSelection}
           onViewMore={() =>
             router.push({
@@ -323,33 +336,16 @@ const styles = StyleSheet.create({
 
   searchWrapper: {
     position: "absolute",
-    top: 60,
     left: 16,
     right: 16,
   },
 
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "white",
-    height: 52,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-  },
-
-  searchInput: {
-    flex: 1,
-    marginLeft: 10,
-    fontSize: 15,
-    color: "#111",
-  },
-
   suggestionsList: {
     marginTop: 8,
-    backgroundColor: "white",
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     paddingVertical: 6,
-    shadowColor: "#000",
+    shadowColor: theme.colors.shadow,
     shadowOpacity: 0.08,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -371,8 +367,8 @@ const styles = StyleSheet.create({
   newPlaceBadge: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#2563eb",
-    backgroundColor: "#eaf2ff",
+    color: theme.colors.primary,
+    backgroundColor: theme.colors.primarySoft,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
@@ -382,22 +378,18 @@ const styles = StyleSheet.create({
   suggestionTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111",
+    color: theme.colors.text,
     flex: 1,
   },
 
   suggestionMeta: {
     marginTop: 2,
     fontSize: 12,
-    color: "#666",
+    color: theme.colors.textMuted,
   },
 
-  cancelButton: {
-    marginLeft: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+  errorText: {
+    color: theme.colors.danger,
+    padding: 16,
   },
 });
