@@ -36,6 +36,7 @@ import com.example.LocationReviewApp.repository.FriendshipRepository;
 import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
 import com.example.LocationReviewApp.service.AzureBlobService;
+import com.example.LocationReviewApp.service.UserService;
 
 @RestController
 @RequestMapping("/users")
