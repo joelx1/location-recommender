@@ -20,15 +20,33 @@ export const filterPlacesByKeyword = (
   places: PlaceResult[],
   rawKeyword: string,
 ) => {
-  const keyword = rawKeyword.trim().toLowerCase();
+  const keyword = normalizePlaceText(rawKeyword);
 
   if (!keyword) return places;
 
   return places.filter((place) => {
     return (
-      place.name.toLowerCase().includes(keyword) ||
-      place.address.toLowerCase().includes(keyword) ||
-      place.category.toLowerCase().includes(keyword)
+      normalizePlaceText(place.name).includes(keyword) ||
+      normalizePlaceText(place.address).includes(keyword) ||
+      normalizePlaceText(place.category).includes(keyword)
     );
   });
+};
+
+export const normalizePlaceText = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+
+export const isSamePlaceByNameAndAddress = (
+  first: { name: string; address: string },
+  second: { name: string; address: string },
+) => {
+  return (
+    normalizePlaceText(first.name) === normalizePlaceText(second.name) &&
+    normalizePlaceText(first.address) === normalizePlaceText(second.address)
+  );
 };

@@ -1,23 +1,23 @@
 package com.example.LocationReviewApp.dto;
 
-import java.util.UUID;
-
-// Represents the data received when creating a new location
+// Represents the data received when creating a new location.
 // Uses plain lat/lng doubles instead of a PostGIS Point
-// so callers don't need to know about PostGIS internals
+// so callers don't need to know about PostGIS internals.
 public class LocationRequest {
 
     private String name;
     private String category;
     private String address;
 
-    // Plain latitude and longitude from the caller
-    // These get converted to a PostGIS Point in the controller
+    // Plain latitude and longitude — converted to a PostGIS Point in the controller
     private double latitude;
     private double longitude;
 
-    // Just the user's ID, not the whole User object
-    private UUID createdById;
+    // Optional — only present when the location was selected from Google Places.
+    // When provided, the controller checks for an existing location with this ID
+    // before inserting, returning the existing row instead of creating a duplicate.
+    // Null for locations added manually inside the app.
+    private String googlePlacesId;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -34,6 +34,6 @@ public class LocationRequest {
     public double getLongitude() { return longitude; }
     public void setLongitude(double longitude) { this.longitude = longitude; }
 
-    public UUID getCreatedById() { return createdById; }
-    public void setCreatedById(UUID createdById) { this.createdById = createdById; }
+    public String getGooglePlacesId() { return googlePlacesId; }
+    public void setGooglePlacesId(String googlePlacesId) { this.googlePlacesId = googlePlacesId; }
 }

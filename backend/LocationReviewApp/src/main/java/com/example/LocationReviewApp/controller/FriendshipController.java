@@ -1,90 +1,98 @@
 package com.example.LocationReviewApp.controller;
 
-import java.util.UUID;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
-
 import com.example.LocationReviewApp.dto.FriendRequest;
 import com.example.LocationReviewApp.model.Friendship;
 import com.example.LocationReviewApp.model.FriendshipStatus;
 import com.example.LocationReviewApp.model.User;
 import com.example.LocationReviewApp.repository.FriendshipRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import java.util.UUID;
 
-// Handles all API requests related to friendships
+// Handles all API requests related to friendships.
 // Base URL for all endpoints in this controller: /friends
 @RestController
 @RequestMapping("/friends")
 public class FriendshipController {
 
-    // Injects the FriendshipRepository so we can query the database
     @Autowired
     private FriendshipRepository friendshipRepository;
 
-    // Injects UserRepository to look up requester and receiver by ID
     @Autowired
     private UserRepository userRepository;
 
-    // POST /friends - sends a friend request from the authenticated user to another user
+    // POST /friends — adds a friend, creating the relationship as ACCEPTED immediately.
+    //
+    // MVP decision: no pending/request flow. Tapping "Add Friend" on the frontend
+    // connects both users instantly. Both users appear in each other's feed and friend
+    // lists straight away.
+    //
+    // The requester is always derived from the JWT — callers cannot add friends on
+    // behalf of someone else.
+    //
     // Body: { "receiverId": "uuid" }
-    // The requester is derived from the JWT — callers cannot send requests as someone else.
     @PostMapping
     public Friendship sendFriendRequest(@RequestBody FriendRequest request,
                                         @AuthenticationPrincipal Jwt jwt) {
 
-        // Derive the requester from the JWT — never trust the request body for identity
         User requester = userRepository.findByAzureOid(jwt.getSubject())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Authenticated user not found — call /auth/me first"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Authenticated user not found — call /auth/me first"));
 
-        var receiver = userRepository.findById(request.getReceiverId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receiver not found"));
+        User receiver = userRepository.findById(request.getReceiverId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
 
         if (requester.getId().equals(receiver.getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot send a friend request to yourself");
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "You cannot add yourself as a friend");
         }
 
-        // Prevent duplicate requests (in either direction)
+        // Prevent duplicates in either direction before creating
         friendshipRepository.findBetweenUsers(requester.getId(), receiver.getId())
-                .ifPresent(f -> { throw new ResponseStatusException(HttpStatus.CONFLICT, "Friendship already exists"); });
+                .ifPresent(f -> {
+                    throw new ResponseStatusException(
+                            HttpStatus.CONFLICT, "Friendship already exists");
+                });
 
         Friendship friendship = new Friendship();
         friendship.setRequester(requester);
         friendship.setReceiver(receiver);
-
-        // Temporary use for testing
+        // Explicitly set ACCEPTED even though it is now the entity default,
+        // so the intent is clear to anyone reading this code.
         friendship.setStatus(FriendshipStatus.ACCEPTED);
-        // Status defaults to PENDING in the entity — no need to set it explicitly
 
         return friendshipRepository.save(friendship);
     }
 
-    // PATCH /friends/{id} - accepts a pending friend request
-    // The {id} is the friendship record's UUID.
-    // The receiver is derived from the JWT — the caller must be the intended receiver.
+    // PATCH /friends/{id} — kept for backwards compatibility only.
+    //
+    // This endpoint was used to accept a pending friend request in the old request/accept
+    // flow. It is no longer needed now that POST /friends creates ACCEPTED directly.
+    // It can be removed once the frontend confirms it is no longer calling this endpoint.
     @PatchMapping("/{id}")
     public Friendship acceptFriendRequest(@PathVariable UUID id,
                                           @AuthenticationPrincipal Jwt jwt) {
 
-        // Derive the receiver from the JWT — never trust a query parameter for identity
         User receiver = userRepository.findByAzureOid(jwt.getSubject())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Authenticated user not found — call /auth/me first"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Authenticated user not found — call /auth/me first"));
 
-        // Only fetch the friendship if the caller is actually the receiver
         Friendship friendship = friendshipRepository.findByIdAndReceiverId(id, receiver.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Friendship not found or you are not the receiver"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Friendship not found or you are not the receiver"));
 
         if (friendship.getStatus() == FriendshipStatus.ACCEPTED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Friend request is already accepted");
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Friendship is already accepted");
         }
 
         friendship.setStatus(FriendshipStatus.ACCEPTED);

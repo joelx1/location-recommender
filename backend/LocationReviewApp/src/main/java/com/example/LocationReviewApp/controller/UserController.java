@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,66 +24,98 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.LocationReviewApp.dto.FeedItem;
+import com.example.LocationReviewApp.dto.UserSummary;
+import com.example.LocationReviewApp.model.DeviceToken;
 import com.example.LocationReviewApp.model.Friendship;
 import com.example.LocationReviewApp.model.FriendshipStatus;
 import com.example.LocationReviewApp.model.Review;
 import com.example.LocationReviewApp.model.User;
+import com.example.LocationReviewApp.repository.DeviceTokenRepository;
 import com.example.LocationReviewApp.repository.FriendshipRepository;
 import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
 import com.example.LocationReviewApp.service.AzureBlobService;
 
-// Handles all API requests related to users
-// Base URL for all endpoints in this controller: /users
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
-    // Injects the UserRepository so we can query the database
     @Autowired
     private UserRepository userRepository;
 
-    // Injects ReviewRepository to fetch reviews written by a user
     @Autowired
     private ReviewRepository reviewRepository;
 
-    // Injects FriendshipRepository to fetch friends and feed
     @Autowired
     private FriendshipRepository friendshipRepository;
 
     @Autowired
     private AzureBlobService blobService;
 
-    // GET /users - returns all users in the database
+    @Autowired
+    private DeviceTokenRepository deviceTokenRepository;
+
+    // GET /users — returns all users in the database
     @GetMapping
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    // GET /users/{id} - returns a single user by their UUID
+    // GET /users/search?q=sometext
+    // Case-insensitive username search — used by the Home screen people-search.
+    // Returns up to 20 results as slim UserSummary objects (id, username, profilePic, bio).
+    // Excludes the calling user so they don't appear in their own results.
+    // Returns an empty list for blank queries rather than returning all users.
+    //
+    // IMPORTANT: this route must be declared before /{id} in the file. Spring MVC maps
+    // routes top-to-bottom, so if /{id} appears first, the literal string "search" gets
+    // passed to UUID.fromString() and throws a 400 before this method is ever reached.
+    @GetMapping("/search")
+    public List<UserSummary> searchUsers(
+            @RequestParam String q,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        if (q == null || q.isBlank()) {
+            return List.of();
+        }
+
+        User caller = userRepository.findByAzureOid(jwt.getSubject())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Authenticated user not found — call /auth/me first"));
+
+        return userRepository
+                .searchByUsername(q.trim(), caller.getId(), PageRequest.of(0, 20))
+                .stream()
+                .map(UserSummary::from)
+                .collect(Collectors.toList());
+    }
+
+    // GET /users/{id} — returns a single user by their UUID
     @GetMapping("/{id}")
     public User getUserById(@PathVariable UUID id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
     }
 
-    // PATCH /users/{id} - partially updates a user's profile
-    // Only fields present in the request body are updated — omitted fields are left unchanged
-    // Updatable fields: username, email, bio
-    // Note: username and email are unique columns — if the new value is already taken by another
-    // user, the database will reject the save.
+    // PATCH /users/{id} — partially updates a user's profile
+    // Only fields present in the request body are updated — omitted fields are left unchanged.
+    // Only the account owner can update their own profile (enforced via JWT).
     @PatchMapping("/{id}")
-    public User updateUser(@PathVariable UUID id, @RequestBody User updates,
+    public User updateUser(@PathVariable UUID id,
+                           @RequestBody User updates,
                            @AuthenticationPrincipal Jwt jwt) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
 
-        // Only the account owner can update their own profile
-        if (!user.getAzureOid().equals(jwt.getSubject())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only update your own profile");
+        if (!jwt.getSubject().equals(user.getAzureOid())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You can only update your own profile");
         }
 
-        // Only apply a field if it was actually included in the request (non-null)
         if (updates.getUsername() != null) user.setUsername(updates.getUsername());
         if (updates.getEmail() != null)    user.setEmail(updates.getEmail());
         if (updates.getBio() != null)      user.setBio(updates.getBio());
@@ -90,100 +123,154 @@ public class UserController {
         return userRepository.save(user);
     }
 
-    // DELETE /users/{id} - deletes a user by their UUID
+    // DELETE /users/{id} — deletes a user by their UUID
+    // Only the account owner can delete their own account (enforced via JWT).
     @DeleteMapping("/{id}")
-    public void deleteUser(@PathVariable UUID id, @AuthenticationPrincipal Jwt jwt) {
+    public void deleteUser(@PathVariable UUID id,
+                           @AuthenticationPrincipal Jwt jwt) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
 
-        // Only the account owner can delete their own account
-        if (!user.getAzureOid().equals(jwt.getSubject())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete your own account");
+        if (!jwt.getSubject().equals(user.getAzureOid())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You can only delete your own account");
         }
 
         userRepository.deleteById(id);
     }
 
-    // GET /users/{id}/reviews - returns all reviews written by a user
+    // GET /users/{id}/reviews — returns all reviews written by a user
     @GetMapping("/{id}/reviews")
     public List<Review> getReviewsByUser(@PathVariable UUID id) {
         return reviewRepository.findByUserId(id);
     }
 
-    // GET /users/{id}/friends - returns all accepted friends for a user
-    // A friendship is bidirectional, so we check both sides and return the *other* user in each pair
+    // GET /users/{id}/friends — returns all accepted friends for a user
+    // Checks both directions of the friendship row (user may be requester or receiver).
     @GetMapping("/{id}/friends")
     public List<User> getFriends(@PathVariable UUID id) {
-        List<Friendship> friendships = friendshipRepository.findByUserIdAndStatus(id, FriendshipStatus.ACCEPTED);
+        List<Friendship> friendships = friendshipRepository
+                .findByUserIdAndStatus(id, FriendshipStatus.ACCEPTED);
 
         return friendships.stream()
-                .map(f -> f.getRequester().getId().equals(id) ? f.getReceiver() : f.getRequester())
+                .map(f -> f.getRequester().getId().equals(id)
+                        ? f.getReceiver()
+                        : f.getRequester())
                 .collect(Collectors.toList());
     }
 
-    // GET /users/{id}/feed - returns reviews posted by a user's friends, newest first
+    // GET /users/{id}/feed — returns reviews posted by the user's friends, newest first.
+    //
+    // Returns List<FeedItem> — a flat shape with all fields the feed card needs.
+    // This is a breaking change from the previous List<Review> response which returned
+    // deeply nested user and location objects.
+    //
+    // New shape per item:
+    //   id, userId, username, profilePic,
+    //   locationId, locationName, locationCategory, locationAddress,
+    //   rating, body, photoUrl, createdAt
     @GetMapping("/{id}/feed")
-    public List<Review> getFeed(@PathVariable UUID id) {
-        return reviewRepository.findFeedForUser(id, FriendshipStatus.ACCEPTED);
+    public List<FeedItem> getFeed(@PathVariable UUID id) {
+        return reviewRepository.findFeedForUser(id, FriendshipStatus.ACCEPTED)
+                .stream()
+                .map(FeedItem::from)
+                .collect(Collectors.toList());
     }
 
     // GET /users/{id}/friendship-status?with={otherUserId}
-    // Returns the friendship status between two users from the perspective of the logged-in user
-    // Used by the Friend Profile screen to determine which button state to show:
-    //   NONE     → show "Add Friend"
-    //   PENDING  → show "Request Sent" (or "Respond" if they are the receiver)
-    //   ACCEPTED → show "Friends"
-    // Reuses findBetweenUsers which checks both directions, so order of {id} and ?with= doesn't matter
+    // Returns the friendship status between two users.
+    // Possible values: "NONE", "ACCEPTED"
+    // (PENDING no longer occurs in normal flow — kept in case any legacy records exist)
     @GetMapping("/{id}/friendship-status")
     public Map<String, String> getFriendshipStatus(
             @PathVariable UUID id,
             @RequestParam UUID with) {
 
-        // Verify both users exist before querying — gives a clear 404 rather than just returning NONE
         userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
         userRepository.findById(with)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Other user not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Other user not found"));
 
         String status = friendshipRepository.findBetweenUsers(id, with)
-                .map(f -> f.getStatus().name())  // returns "PENDING" or "ACCEPTED" from the enum
-                .orElse("NONE");                 // no record found means no relationship exists
+                .map(f -> f.getStatus().name())
+                .orElse("NONE");
 
         return Map.of("status", status);
     }
 
-    // POST /users/{id}/profile-picture - uploads a profile picture to Azure Blob Storage
-    // stores the returned blob URL in the database
+    // POST /users/{id}/profile-picture — uploads a profile picture to Azure Blob Storage.
+    // Only the account owner can upload their own profile picture (enforced via JWT).
     @PostMapping("/{id}/profile-picture")
-    public ResponseEntity<Map<String, String>> uploadProfilePicture(@PathVariable UUID id,
+    public ResponseEntity<Map<String, String>> uploadProfilePicture(
+            @PathVariable UUID id,
             @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal Jwt jwt)
-    {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+            @AuthenticationPrincipal Jwt jwt) {
 
-        // Only the account owner can upload their own profile picture
-        if (!user.getAzureOid().equals(jwt.getSubject())) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!jwt.getSubject().equals(user.getAzureOid())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "You can only update your own profile picture"));
         }
 
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/"))
-        {
-            return ResponseEntity.badRequest().body(Map.of("error", "File must be an image"));
+        if (contentType == null || !contentType.startsWith("image/")) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "File must be an image"));
         }
 
-        try
-        {
+        try {
             String url = blobService.uploadImage(file);
             user.setProfilePic(url);
             userRepository.save(user);
             return ResponseEntity.ok(Map.of("url", url));
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", "Upload failed: " + e.getMessage()));
         }
-        catch (IOException e)
-        {
-            return ResponseEntity.internalServerError().body(Map.of("error", "Upload failed: " + e.getMessage()));
+    }
+
+    // POST /users/{id}/device-token — registers an Expo push token for a user.
+    // Called by the app on launch after the user grants notification permissions.
+    // Returns 200 if the token is already registered, 201 if newly added.
+    // The caller must be the account owner (enforced via JWT).
+    @PostMapping("/{id}/device-token")
+    public ResponseEntity<Void> registerDeviceToken(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!jwt.getSubject().equals(user.getAzureOid())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You can only register tokens for your own account");
         }
+
+        String token = body.get("token");
+        if (token == null || token.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Token must not be blank");
+        }
+
+        // If already registered, return 200 — nothing to do
+        if (deviceTokenRepository.existsByUserIdAndToken(id, token)) {
+            return ResponseEntity.ok().build();
+        }
+
+        DeviceToken deviceToken = new DeviceToken();
+        deviceToken.setUser(user);
+        deviceToken.setToken(token);
+        deviceTokenRepository.save(deviceToken);
+
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

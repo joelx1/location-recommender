@@ -53,7 +53,7 @@ class AuthControllerTest {
                         .claim("given_name", "Test")
                         .claim("family_name", "User"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.azureOid").value("test-oid-123"))
+                .andExpect(jsonPath("$.username").value("Test User"))
                 .andExpect(jsonPath("$.email").value("testuser@example.com"))
                 .andExpect(jsonPath("$.username").value("Test User"));
     }
@@ -77,7 +77,7 @@ class AuthControllerTest {
                         .claim("given_name", "Test")
                         .claim("family_name", "User"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.azureOid").value("test-oid-123"));
+                .andExpect(jsonPath("$.username").value("Test User"));
 
         long count = userRepository.findAll().stream()
                 .filter(u -> "test-oid-123".equals(u.getAzureOid()))

@@ -1,19 +1,13 @@
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+import { View, Text, StyleSheet, Alert } from "react-native";
 import React, { useCallback, useState } from "react";
 import ScreenWrapper from "@/components/ScreenWrapper";
 import ProfileTab from "@/components/profile/ProfileTab";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import { router, useFocusEffect } from "expo-router";
 import { API_BASE_URL } from "@/services/api";
-import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { theme } from "@/theme";
+import ProfilePostCard from "@/components/profile/ProfilePostCard";
 
 type BackendUser = {
   id: string;
@@ -125,7 +119,7 @@ const Profile = () => {
 
       setProfileData({
         username: userData.username ?? "User",
-        bio: userData.bio ?? "No bio yet",
+        bio: userData.bio?.trim() || "No bio yet",
         profilePic: userData.profilePic ?? "",
         followingCount: friendsData.length,
         followersCount: friendsData.length,
@@ -186,6 +180,35 @@ const Profile = () => {
     }, [user?.id, token]),
   );
 
+  const renderPostCard = (item: PostItem) => (
+    <ProfilePostCard
+      key={item.id}
+      post={item}
+      onPress={() => {
+        if (item.locationId) {
+          router.push({
+            pathname: "/placeDetails",
+            params: { id: item.locationId },
+          });
+        }
+      }}
+      onDelete={() =>
+        Alert.alert(
+          "Delete review",
+          "Are you sure you want to delete this review?",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Delete",
+              style: "destructive",
+              onPress: () => handleDeleteReview(item.id),
+            },
+          ],
+        )
+      }
+    />
+  );
+
   return (
     <ScreenWrapper
       scrollable
@@ -223,142 +246,11 @@ const Profile = () => {
       ) : (
         <View style={styles.gridPlaceHolder}>
           <View style={styles.leftColumn}>
-            {leftColumnData.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.gridCard}
-                onPress={() => {
-                  if (item.locationId) {
-                    router.push({
-                      pathname: "/placeDetails",
-                      params: { id: item.locationId },
-                    });
-                  }
-                }}
-              >
-                {item.photoUrl ? (
-                  <Image
-                    source={{ uri: item.photoUrl }}
-                    style={styles.cardImage}
-                  />
-                ) : null}
-                <View
-                  style={[
-                    styles.cardContent,
-                    !item.photoUrl && styles.textOnlyContent,
-                  ]}
-                >
-                  <View style={styles.cardTitleRow}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {item.locationName}
-                    </Text>
-
-                    <TouchableOpacity
-                      onPress={() =>
-                        Alert.alert(
-                          "Delete review",
-                          "Are you sure you want to delete this review?",
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Delete",
-                              style: "destructive",
-                              onPress: () => handleDeleteReview(item.id),
-                            },
-                          ],
-                        )
-                      }
-                      style={styles.deleteButton}
-                    >
-                      <Feather name="trash-2" size={14} color="#444" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.cardMetaRow}>
-                    <View style={styles.cardRatingRow}>
-                      <Feather name="star" size={12} color="#f59e0b" />
-                      <Text style={styles.cardRating}>{item.rating}</Text>
-                      {item.category ? (
-                        <Text style={styles.cardCategoryInline}>
-                          {item.category}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-                  <Text style={styles.cardBody} numberOfLines={2}>
-                    {item.body || "No written review."}
-                  </Text>
-                  <Text style={styles.cardDate}>{item.createdAt}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {leftColumnData.map(renderPostCard)}
           </View>
 
           <View style={styles.rightColumn}>
-            {rightColumnData.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.gridCard}
-                onPress={() => {
-                  if (item.locationId) {
-                    router.push({
-                      pathname: "/placeDetails",
-                      params: { id: item.locationId },
-                    });
-                  }
-                }}
-              >
-                {item.photoUrl ? (
-                  <Image
-                    source={{ uri: item.photoUrl }}
-                    style={styles.cardImage}
-                  />
-                ) : null}
-                <View style={styles.cardContent}>
-                  <View style={styles.cardTitleRow}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>
-                      {item.locationName}
-                    </Text>
-
-                    <TouchableOpacity
-                      onPress={() =>
-                        Alert.alert(
-                          "Delete review",
-                          "Are you sure you want to delete this review?",
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Delete",
-                              style: "destructive",
-                              onPress: () => handleDeleteReview(item.id),
-                            },
-                          ],
-                        )
-                      }
-                      style={styles.deleteButton}
-                    >
-                      <Feather name="trash-2" size={14} color="#444" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.cardMetaRow}>
-                    <View style={styles.cardRatingRow}>
-                      <Feather name="star" size={12} color="#f59e0b" />
-                      <Text style={styles.cardRating}>{item.rating}</Text>
-                      {item.category ? (
-                        <Text style={styles.cardCategoryInline}>
-                          {item.category}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-                  <Text style={styles.cardBody} numberOfLines={2}>
-                    {item.body}
-                  </Text>
-                  <Text style={styles.cardDate}>{item.createdAt}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {rightColumnData.map(renderPostCard)}
           </View>
         </View>
       )}
@@ -371,33 +263,36 @@ export default Profile;
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
   },
 
   container: {
     padding: 12,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
   },
 
   tabRow: {
     flexDirection: "row",
     gap: 24,
-    marginBottom: 20,
+    paddingBottom: 12,
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(17, 24, 39, 0.06)",
   },
 
   gridPlaceHolder: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
 
   leftColumn: {
     flex: 1,
-    gap: 8,
+    gap: 10,
   },
 
   rightColumn: {
     flex: 1,
-    gap: 8,
+    gap: 10,
   },
 
   savedPlaceHolder: {
@@ -407,83 +302,19 @@ const styles = StyleSheet.create({
   savedCard: {
     height: 120,
     borderRadius: 12,
-    backgroundColor: "#f7f7f7",
-  },
-
-  gridCard: {
-    borderRadius: 12,
-    backgroundColor: "#f7f7f7",
-    overflow: "hidden",
+    backgroundColor: theme.colors.surfaceMuted,
   },
 
   stateText: {
     fontSize: 14,
-    color: "#666",
+    color: theme.colors.textMuted,
     paddingVertical: 8,
   },
 
   errorText: {
     fontSize: 14,
-    color: "#c62828",
+    color: theme.colors.danger,
     paddingVertical: 8,
-  },
-
-  cardImage: {
-    width: "90%",
-    height: 96,
-    borderRadius: 12,
-    marginTop: 6,
-    marginBottom: 6,
-    alignSelf: "center",
-  },
-
-  cardContent: {
-    padding: 12,
-  },
-
-  cardTitle: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111",
-    // marginBottom: 6,
-  },
-
-  cardMetaRow: {
-    marginBottom: 6,
-  },
-
-  cardCategoryInline: {
-    fontSize: 12,
-    color: "#8a8a8a",
-    marginLeft: 4,
-    textTransform: "capitalize",
-  },
-
-  cardRatingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 6,
-  },
-
-  cardRating: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#444",
-  },
-
-  cardBody: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: "#333",
-    marginBottom: 8,
-  },
-
-  cardDate: {
-    textAlign: "right",
-    fontSize: 11,
-    color: "#777",
   },
 
   friendsListButton: {
@@ -494,29 +325,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 999,
-    backgroundColor: "#eeeeee",
+    backgroundColor: theme.colors.surfaceMuted,
     marginBottom: 22,
   },
 
   friendsListButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111",
-  },
-
-  cardTitleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 8,
-    marginBottom: 6,
-  },
-
-  deleteButton: {
-    padding: 2,
-  },
-
-  textOnlyContent: {
-    minHeight: 120,
+    color: theme.colors.text,
   },
 });
