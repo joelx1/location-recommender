@@ -139,15 +139,11 @@ public class UserController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
 
-<<<<<<< HEAD
         User requester = userService.findFromJwt(jwt)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Authenticated user not found — call /auth/me first"));
 
         if (!requester.getId().equals(user.getId())) {
-=======
-        if (!jwt.getSubject().equals(user.getAzureOid())) {
->>>>>>> origin/main
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "You can only delete your own account");
         }
