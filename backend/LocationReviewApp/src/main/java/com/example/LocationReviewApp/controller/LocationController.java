@@ -34,6 +34,7 @@ import com.example.LocationReviewApp.model.User;
 import com.example.LocationReviewApp.repository.LocationRepository;
 import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
+import com.example.LocationReviewApp.service.UserService;
 
 @RestController
 @RequestMapping("/locations")
@@ -47,6 +48,9 @@ public class LocationController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private UserService userService;
 
     // GET /locations — returns all locations in the database
     @GetMapping
@@ -134,7 +138,7 @@ public class LocationController {
                 new Coordinate(request.getLongitude(), request.getLatitude()));
 
         // Derive the creator from the JWT — never trust the request body for identity
-        User creator = userRepository.findByAzureOid(jwt.getSubject())
+        User creator = userService.findFromJwt(jwt)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Authenticated user not found — call /auth/me first"));
@@ -165,7 +169,7 @@ public class LocationController {
                     HttpStatus.FORBIDDEN, "You can only delete your own locations");
         }
 
-        User requester = userRepository.findByAzureOid(jwt.getSubject())
+        User requester = userService.findFromJwt(jwt)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Authenticated user not found — call /auth/me first"));
