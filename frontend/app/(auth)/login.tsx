@@ -121,6 +121,7 @@ function friendlyError(code: string): string {
     case "auth/email-already-in-use": return "An account with this email already exists.";
     case "auth/weak-password": return "Password must be at least 6 characters.";
     case "auth/too-many-requests": return "Too many attempts. Try again later.";
+    case "backend/unavailable": return "Could not reach the server. Is the backend running?";
     default: return "Something went wrong. Please try again.";
   }
 }

@@ -2,12 +2,12 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyADkPZEDOn8EZsBzdin2X2Zzy7waRAtQZs",
-  authDomain: "placemark-ffb41.firebaseapp.com",
-  projectId: "placemark-ffb41",
-  storageBucket: "placemark-ffb41.firebasestorage.app",
-  messagingSenderId: "168718339985",
-  appId: "1:168718339985:web:ee61b584a6c5e4fd1d1430",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);

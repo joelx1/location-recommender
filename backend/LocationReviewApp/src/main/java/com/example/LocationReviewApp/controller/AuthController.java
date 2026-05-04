@@ -38,9 +38,11 @@ public class AuthController {
                         String email = jwt.getClaimAsString("email");
                         newUser.setEmail(email != null ? email : jwt.getSubject() + "@placeholder.com");
                         String name = jwt.getClaimAsString("name");
-                        String username = (name != null && !name.isBlank())
+                        String base = (name != null && !name.isBlank())
                                 ? name
                                 : (email != null ? email.split("@")[0] : jwt.getSubject().substring(0, 8));
+                        // Append first 4 chars of UID to prevent collisions on duplicate base usernames
+                        String username = base + "_" + jwt.getSubject().substring(0, 4);
                         newUser.setUsername(username);
                     } else {
                         newUser.setAzureOid(jwt.getSubject());

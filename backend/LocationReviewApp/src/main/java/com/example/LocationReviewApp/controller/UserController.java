@@ -84,7 +84,7 @@ public class UserController {
             return List.of();
         }
 
-        User caller = userRepository.findByAzureOid(jwt.getSubject())
+        User caller = userService.findFromJwt(jwt)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Authenticated user not found — call /auth/me first"));
@@ -252,9 +252,9 @@ public class UserController {
     }
 
     // POST /users/{id}/device-token — registers an Expo push token for a user.
-// Called by the app on launch after the user grants notification permissions.
-// Returns 200 if the token is already registered, 201 if newly added.
-// The caller must be the account owner (enforced via JWT).
+    // Called by the app on launch after the user grants notification permissions.
+    // Returns 200 if the token is already registered, 201 if newly added.
+    // The caller must be the account owner (enforced via JWT).
     @PostMapping("/{id}/device-token")
     public ResponseEntity<Void> registerDeviceToken(
             @PathVariable UUID id,
@@ -265,7 +265,12 @@ public class UserController {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User not found"));
 
-        if (!user.getAzureOid().equals(jwt.getSubject())) {
+        User requester = userService.findFromJwt(jwt)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Authenticated user not found — call /auth/me first"));
+
+        if (!requester.getId().equals(user.getId())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "You can only register tokens for your own account");

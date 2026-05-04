@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
       if (firebaseUser && !token) {
-        await syncFirebaseUser(firebaseUser);
+        try { await syncFirebaseUser(firebaseUser); } catch { /* backend unreachable on cold start — user will log in */ }
       }
       setFirebaseReady(true);
     });
@@ -137,17 +137,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function syncFirebaseUser(firebaseUser: FirebaseUser) {
-    try {
-      const idToken = await firebaseUser.getIdToken();
-      const dbUser = await fetchDbUser(idToken);
-      if (dbUser) {
-        setToken(idToken);
-        setUser(dbUser);
-      }
-    } catch {
-      setToken(null);
-      setUser(null);
-    }
+    const idToken = await firebaseUser.getIdToken();
+    const dbUser = await fetchDbUser(idToken);
+    if (!dbUser) throw Object.assign(new Error("Could not reach server"), { code: "backend/unavailable" });
+    setToken(idToken);
+    setUser(dbUser);
   }
 
   async function fetchDbUser(accessToken: string): Promise<DbUser | null> {

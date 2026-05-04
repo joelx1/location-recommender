@@ -2,7 +2,7 @@ const PLACE_IMAGES = {
   cafe: require("@/assets/images/place-cafe.jpg"),
   restaurant: require("@/assets/images/place-restaurant.jpg"),
   bar: require("@/assets/images/place-bar.jpg"),
-  default: require("@/assets/images/place-default.jpg"),
+  default: require("@/assets/images/place-bar.jpg"),
 };
 
 export const getPlaceImage = (category: string) => {
