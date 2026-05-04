@@ -29,17 +29,6 @@ type FeedReview = {
   body: string | null;
   photoUrl?: string | null;
   createdAt?: string;
-  user?: {
-    id?: string;
-    username?: string;
-    profilePic?: string | null;
-  };
-  location?: {
-    id?: string;
-    name?: string;
-    category?: string | null;
-    address?: string | null;
-  };
 };
 
 const formatFeedDate = (dateString: string) => {
@@ -111,13 +100,8 @@ const Social = () => {
           contentContainerStyle={styles.container}
         >
           {feed.map((review) => {
-            const username =
-              review.username || review.user?.username || "Anonymous";
-            const placeName =
-              review.locationName || review.location?.name || "Unknown place";
-            const profilePic =
-              review.profilePic || review.user?.profilePic || null;
-            const locationId = review.locationId || review.location?.id;
+            const username = review.username ?? "Friend";
+            const placeName = review.locationName ?? "Unknown place";
             const body = review.body?.trim();
             const hasImage = Boolean(review.photoUrl);
 
@@ -125,14 +109,14 @@ const Social = () => {
               <Card key={review.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <View style={styles.userRow}>
-                    <Image
-                      source={
-                        profilePic
-                          ? { uri: profilePic }
-                          : require("@/assets/images/default-avatar.png")
-                      }
-                      style={styles.avatar}
-                    />
+                    {review.profilePic ? (
+                      <Image
+                        source={{ uri: review.profilePic }}
+                        style={styles.avatar}
+                      />
+                    ) : (
+                      <View style={styles.avatar} />
+                    )}
 
                     <View style={styles.headerTextGroup}>
                       <Text style={styles.username}>{username}</Text>
@@ -142,10 +126,10 @@ const Social = () => {
 
                         <TouchableOpacity
                           onPress={() => {
-                            if (locationId) {
+                            if (review.locationId) {
                               router.push({
                                 pathname: "/placeDetails",
-                                params: { id: locationId },
+                                params: { id: review.locationId },
                               });
                             }
                           }}

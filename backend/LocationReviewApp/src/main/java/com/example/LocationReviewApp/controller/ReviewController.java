@@ -26,6 +26,7 @@ import com.example.LocationReviewApp.model.User;
 import com.example.LocationReviewApp.repository.ReviewRepository;
 import com.example.LocationReviewApp.repository.UserRepository;
 import com.example.LocationReviewApp.service.AzureBlobService;
+import com.example.LocationReviewApp.service.UserService;
 
 // Handles all API requests related to reviews
 // Base URL for all endpoints in this controller: /reviews
@@ -42,6 +43,9 @@ public class ReviewController {
 
     @Autowired
     private AzureBlobService blobService;
+
+    @Autowired
+    private UserService userService;
 
     // GET /reviews - returns all reviews in the database
     @GetMapping
@@ -63,7 +67,7 @@ public class ReviewController {
     public Review createReview(@RequestBody Review review, @AuthenticationPrincipal Jwt jwt) {
         // Look up the real user from the JWT and set them as the author — ignore any user
         // the client may have put in the request body to prevent posting as someone else
-        User author = userRepository.findByAzureOid(jwt.getSubject())
+        User author = userService.findFromJwt(jwt)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Authenticated user not found — call /auth/me first"));
         review.setUser(author);
@@ -89,7 +93,10 @@ public class ReviewController {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));
 
-        if (!jwt.getSubject().equals(review.getUser().getAzureOid())) {
+        User requester = userService.findFromJwt(jwt)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Authenticated user not found — call /auth/me first"));
+
+        if (!requester.getId().equals(review.getUser().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete your own reviews");
         }
 
@@ -107,7 +114,10 @@ public class ReviewController {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Review not found"));
 
-        if (!jwt.getSubject().equals(review.getUser().getAzureOid())) {
+        User requester = userService.findFromJwt(jwt)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Authenticated user not found — call /auth/me first"));
+
+        if (!requester.getId().equals(review.getUser().getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(Map.of("error", "You can only add photos to your own reviews"));
         }

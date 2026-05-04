@@ -24,12 +24,15 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    // The issuer URI from application.properties — Spring uses this to auto-discover the JWK keys
-    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+    private static final String FIREBASE_PROJECT_ID = "placemark-ffb41";
+    private static final String FIREBASE_ISSUER = "https://securetoken.google.com/" + FIREBASE_PROJECT_ID;
+    private static final String FIREBASE_ISSUER_PREFIX = "https://securetoken.google.com/";
+    private static final String FIREBASE_JWK_URI = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
+
+    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:}")
     private String issuerUri;
 
-    // The backend app's client ID — every token must be issued for this specific app
-    @Value("${azure.entra.client-id}")
+    @Value("${azure.entra.client-id:}")
     private String backendClientId;
 
     @Bean
@@ -56,32 +59,45 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        // JwtDecoders.fromIssuerLocation() fetches the OIDC discovery document from the
-        // issuer URI and auto-discovers the JWK keys endpoint. Spring downloads the public
-        // keys from there on startup and uses them to verify every token signature.
-        NimbusJwtDecoder decoder = JwtDecoders.fromIssuerLocation(issuerUri);
+        // Firebase decoder — Firebase doesn't publish an OIDC discovery doc so we point
+        // directly at the JWK URI rather than using fromIssuerLocation().
+        NimbusJwtDecoder firebaseDecoder = NimbusJwtDecoder.withJwkSetUri(FIREBASE_JWK_URI).build();
+        OAuth2TokenValidator<Jwt> firebaseIssuerValidator = JwtValidators.createDefaultWithIssuer(FIREBASE_ISSUER);
+        OAuth2TokenValidator<Jwt> firebaseAudienceValidator = token ->
+            token.getAudience().contains(FIREBASE_PROJECT_ID)
+                ? OAuth2TokenValidatorResult.success()
+                : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Token audience does not match Firebase project", null));
+        firebaseDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(firebaseIssuerValidator, firebaseAudienceValidator));
 
-        // createDefaultWithIssuer gives us: expiry check (exp), not-before check (nbf),
-        // and issuer check (iss). Without these, an expired token would still be accepted.
-        OAuth2TokenValidator<Jwt> defaultValidators = JwtValidators.createDefaultWithIssuer(issuerUri);
+        // Azure decoder — only built when the issuer URI is configured.
+        NimbusJwtDecoder azureDecoder = null;
+        if (issuerUri != null && !issuerUri.isBlank()) {
+            azureDecoder = JwtDecoders.fromIssuerLocation(issuerUri);
+            OAuth2TokenValidator<Jwt> azureDefaultValidators = JwtValidators.createDefaultWithIssuer(issuerUri);
+            OAuth2TokenValidator<Jwt> azureAudienceValidator = token ->
+                token.getAudience().contains(backendClientId)
+                    ? OAuth2TokenValidatorResult.success()
+                    : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Token was not issued for this API", null));
+            azureDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(azureDefaultValidators, azureAudienceValidator));
+        }
 
-        // Our custom check: the token's audience must match our backend client ID.
-        // This ensures tokens issued for other apps in the same tenant are rejected.
-        OAuth2TokenValidator<Jwt> audienceValidator = token -> {
-            if (token.getAudience().contains(backendClientId)) {
-                return OAuth2TokenValidatorResult.success();
+        final NimbusJwtDecoder finalAzureDecoder = azureDecoder;
+
+        // Peek at the raw token's issuer claim (without verifying the signature) to route
+        // to the correct decoder. JWTParser is safe here — verification happens inside
+        // whichever decoder we delegate to.
+        return token -> {
+            try {
+                String issuer = com.nimbusds.jwt.JWTParser.parse(token).getJWTClaimsSet().getIssuer();
+                if (issuer != null && issuer.startsWith(FIREBASE_ISSUER_PREFIX)) {
+                    return firebaseDecoder.decode(token);
+                }
+            } catch (Exception ignored) {}
+            if (finalAzureDecoder == null) {
+                throw new org.springframework.security.oauth2.jwt.BadJwtException("Azure auth is not configured on this server");
             }
-            return OAuth2TokenValidatorResult.failure(
-                new OAuth2Error("invalid_token", "Token was not issued for this API", null)
-            );
+            return finalAzureDecoder.decode(token);
         };
-
-        // DelegatingOAuth2TokenValidator runs ALL validators — both must pass.
-        // setJwtValidator() replaces the default validators entirely, so we must
-        // include the default ones explicitly here or expiry checking is lost.
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(defaultValidators, audienceValidator));
-
-        return decoder;
     }
 
     @Bean

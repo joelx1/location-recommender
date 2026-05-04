@@ -16,6 +16,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     // Used by AuthController to look up the DB user from the JWT subject claim
     Optional<User> findByAzureOid(String azureOid);
 
+    Optional<User> findByUid(String uid);
+
     // Case-insensitive username search for GET /users/search.
     // Matches anywhere in the username so "ack" finds "jack".
     // Excludes the calling user so they don't appear in their own results.

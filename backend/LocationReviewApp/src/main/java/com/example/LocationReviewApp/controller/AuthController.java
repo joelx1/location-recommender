@@ -2,6 +2,7 @@ package com.example.LocationReviewApp.controller;
 
 import com.example.LocationReviewApp.model.User;
 import com.example.LocationReviewApp.repository.UserRepository;
+import com.example.LocationReviewApp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -16,6 +17,9 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserService userService;
+
     // POST /auth/me
     // The frontend calls this after every login.
     // Returns the existing user if they've logged in before.
@@ -25,30 +29,33 @@ public class AuthController {
     // from the validated Bearer token in the request. No manual parsing needed.
     @PostMapping("/me")
     public User getOrCreateUser(@AuthenticationPrincipal Jwt jwt) {
-        // 'sub' is the Azure Object ID — unique per Entra user, never changes
-        String azureOid = jwt.getSubject();
-
-        return userRepository.findByAzureOid(azureOid)
+        return userService.findFromJwt(jwt)
                 .orElseGet(() -> {
-                    // First login — provision a new user row
                     User newUser = new User();
-                    newUser.setAzureOid(azureOid);
 
-                    // Entra External ID returns email as a single "email" claim
-                    String email = jwt.getClaimAsString("email");
-                    newUser.setEmail(email != null ? email : azureOid + "@placeholder.com");
-
-                    // Build display name from given_name + family_name claims
-                    // Fall back to email prefix if neither is present
-                    String givenName = jwt.getClaimAsString("given_name");
-                    String familyName = jwt.getClaimAsString("family_name");
-                    String fallbackUsername = email != null
-                            ? email.split("@")[0]
-                            : azureOid.substring(0, 8);
-                    String username = (givenName != null || familyName != null)
-                            ? ((givenName != null ? givenName : "") + " " + (familyName != null ? familyName : "")).trim()
-                            : fallbackUsername;
-                    newUser.setUsername(username);
+                    if (userService.isFirebaseToken(jwt)) {
+                        newUser.setUid(jwt.getSubject());
+                        String email = jwt.getClaimAsString("email");
+                        newUser.setEmail(email != null ? email : jwt.getSubject() + "@placeholder.com");
+                        String name = jwt.getClaimAsString("name");
+                        String base = (name != null && !name.isBlank())
+                                ? name
+                                : (email != null ? email.split("@")[0] : jwt.getSubject().substring(0, 8));
+                        // Append first 4 chars of UID to prevent collisions on duplicate base usernames
+                        String username = base + "_" + jwt.getSubject().substring(0, 4);
+                        newUser.setUsername(username);
+                    } else {
+                        newUser.setAzureOid(jwt.getSubject());
+                        String email = jwt.getClaimAsString("email");
+                        newUser.setEmail(email != null ? email : jwt.getSubject() + "@placeholder.com");
+                        String givenName = jwt.getClaimAsString("given_name");
+                        String familyName = jwt.getClaimAsString("family_name");
+                        String fallbackUsername = email != null ? email.split("@")[0] : jwt.getSubject().substring(0, 8);
+                        String username = (givenName != null || familyName != null)
+                                ? ((givenName != null ? givenName : "") + " " + (familyName != null ? familyName : "")).trim()
+                                : fallbackUsername;
+                        newUser.setUsername(username);
+                    }
 
                     return userRepository.save(newUser);
                 });

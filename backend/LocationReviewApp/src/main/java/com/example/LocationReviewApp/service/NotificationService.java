@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -19,6 +20,7 @@ import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -108,9 +110,8 @@ public class NotificationService {
     // Uses Java's built-in HttpClient — no extra dependencies needed.
     private boolean sendExpoPushNotification(String token, String title, String body) {
         try {
-            String json = String.format(
-                    "{\"to\":\"%s\",\"title\":\"%s\",\"body\":\"%s\"}",
-                    token, title, body);
+            String json = new ObjectMapper().writeValueAsString(
+                    Map.of("to", token, "title", title, "body", body));
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(EXPO_PUSH_URL))

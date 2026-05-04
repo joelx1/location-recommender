@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -35,6 +34,11 @@ public class User {
     @Column(unique = true)
     private String azureOid;
 
+    // The user's Firebase UID — read from the 'sub' claim in Firebase JWTs.
+    // Set once on first login for Firebase users. Null for Azure users.
+    @Column(unique = true)
+    private String uid;
+
     // Stores a user's bio with a 500 char limit
     @Column(length = 500)
     private String bio;
@@ -56,6 +60,10 @@ public class User {
     @JsonIgnore
     public String getAzureOid() { return azureOid; }
     public void setAzureOid(String azureOid) { this.azureOid = azureOid; }
+
+    @JsonIgnore
+    public String getUid() { return uid; }
+    public void setUid(String uid) { this.uid = uid; }
 
     public String getBio() { return bio; }
     public void setBio(String bio) { this.bio = bio; }

@@ -25,7 +25,7 @@ public class AzureBlobService
         String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "image";
         String blobName = UUID.randomUUID() + "_" + originalFilename;
         BlobClient blobClient = containerClient.getBlobClient(blobName);
-        BlobHttpHeaders headers = new BlobHttpHeaders().setContentType(file.getContentType()); // e.g. "image/jpeg", "image/png"
+        BlobHttpHeaders headers = new BlobHttpHeaders().setContentType(file.getContentType());
         blobClient.upload(file.getInputStream(), file.getSize(), true);
         blobClient.setHttpHeaders(headers);
         return blobClient.getBlobUrl();
